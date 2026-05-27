@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "targets": [
+      "getcomparablesales"
+    ],
+    "ignore": [],
+    "source": "functions"
+  }
+}

@@ -1,0 +1,12 @@
+{
+	"name": "getcomparablesales",
+	"version": "1.0.0",
+	"main": "index.js",
+	"author": "info@agenttime.au",
+	"dependencies": {
+		"axios": "^1.16.0",
+		"dotenv": "^17.4.2",
+		"node-fetch": "^3.3.2",
+		"zcatalyst-sdk-node": "latest"
+	}
+}

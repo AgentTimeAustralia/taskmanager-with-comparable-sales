@@ -1,461 +1,1510 @@
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <meta charset="UTF-8">
-    <title>Property Search</title>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 
-    <script src="https://static.zohocdn.com/zohocrm/v2/sdk/ZohoEmbededAppSDK.min.js"></script>
+    <!-- Zoho SDK -->
+    <script src="https://live.zwidgets.com/js-sdk/1.0.5/ZohoEmbededAppSDK.min.js"></script>
 
-    <!-- Zoho CRM Font -->
-    <link href="//static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Regular.woff2" rel="preload" as="font" type="font/woff2" crossorigin>
-    <link href="//static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Medium.woff2" rel="preload" as="font" type="font/woff2" crossorigin>
-    <link href="//static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_SemiBold.woff2" rel="preload" as="font" type="font/woff2" crossorigin>
-    <link href="//static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Bold.woff2" rel="preload" as="font" type="font/woff2" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
 
     <style>
+      /* ===== BASE ===== */
+      * {
+        font-family: "Poppins", sans-serif;
+        box-sizing: border-box;
+      }
 
-    @font-face {
-    font-family: "Zoho Puvi";
-    src: url("//static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Regular.woff2") format("woff2");
-    font-weight: 400;
-    }
+      body {
+        margin: 0;
+        background: #f5f6f8;
+        padding: 16px;
+      }
 
-    @font-face {
-    font-family: "Zoho Puvi";
-    src: url("//static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Medium.woff2") format("woff2");
-    font-weight: 500;
-    }
+      /* ===== CONTAINER ===== */
+      .container {
+        max-width: 100%;
+        margin: auto;
+      }
 
-    @font-face {
-    font-family: "Zoho Puvi";
-    src: url("//static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_SemiBold.woff2") format("woff2");
-    font-weight: 600;
-    }
+      /* ===== HEADER ===== */
+      .header {
+        background: white;
+        border-radius: 14px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+      }
 
-    @font-face {
-    font-family: "Zoho Puvi";
-    src: url("//static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Bold.woff2") format("woff2");
-    font-weight: 700;
-    }
+      /* ===== PROGRESS ===== */
+      .progress-box {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
 
-    body{
-    font-family:"Zoho Puvi", Arial, sans-serif;
-    background:#f7f7f7;
-    margin:0;
-    padding:20px;
-    font-size:14px;
-    color:#313949;
-    }
+      .progress-circle {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: conic-gradient(
+          #62ef69 var(--progress),
+          #e3e6ea var(--progress)
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+      }
 
-    .container{
-    max-width:700px;
-    margin:auto;
-    background:white;
-    padding:20px;
-    border-radius:6px;
-    box-shadow:0 1px 3px rgba(0,0,0,0.08);
-    }
+      /* ===== PHASE ===== */
+      .phase {
+        font-size: 18px;
+        font-weight: 500;
+      }
 
-    h2{
-    margin-top:0;
-    font-size:18px;
-    font-weight:600;
-    }
+      /* ===== TASK LIST PLACEHOLDER ===== */
+      .tasks {
+        margin-top: 20px;
+        background: white;
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+      }
 
-    input{
-    width:100%;
-    padding:10px;
-    border:1px solid #ddd;
-    border-radius:4px;
-    font-size:14px;
-    }
+      /* ===== FOOTER ===== */
+      .footer {
+        margin-top: 16px;
+        display: flex;
+        justify-content: flex-end;
+      }
 
-    .dropdown{
-    border:1px solid #ddd;
-    background:white;
-    max-height:180px;
-    overflow-y:auto;
-    margin-top:4px;
-    border-radius:4px;
-    }
+      button {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        background: #1f1f1f;
+        color: white;
+        cursor: pointer;
+      }
 
-    .dropdown div{
-    padding:8px;
-    cursor:pointer;
-    }
+      .task-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+      }
 
-    .dropdown div:hover{
-    background:#f2f2f2;
-    }
+      .task-name {
+        font-size: 14px;
+        font-weight: 500;
+      }
 
-    .filters{
-    display:flex;
-    gap:8px;
-    margin-top:12px;
-    }
+      .task-right {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
 
-    select{
-    padding:8px;
-    border:1px solid #ddd;
-    border-radius:4px;
-    font-size:13px;
-    }
+      select {
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+      }
 
-    button{
-    padding:9px 14px;
-    border:none;
-    background:#d32f2f;
-    color:white;
-    border-radius:4px;
-    cursor:pointer;
-    }
+      .task-row button {
+        background: #43b548;
+        padding: 6px 10px;
+      }
 
-    button:hover{
-    background:#b71c1c;
-    }
+      .toast {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1f1f1f;
+        color: white;
+        padding: 12px 18px;
+        border-radius: 8px;
+        opacity: 0;
+        transition: 0.3s;
+        z-index: 9999;
+      }
 
-    .results{
-    margin-top:20px;
-    }
+      .toast.show {
+        opacity: 1;
+      }
 
-    .property{
-    border:1px solid #eee;
-    border-radius:6px;
-    padding:14px;
-    margin-bottom:12px;
-    background:white;
-    }
+      .toast.error {
+        background: #e53935;
+      }
 
-    .property h3{
-    margin:0 0 6px 0;
-    font-size:15px;
-    font-weight:600;
-    }
+      .toast.success {
+        background: #27a02d;
+      }
 
-    .property p{
-    margin:3px 0;
-    font-size:13px;
-    }
+      textarea {
+        width: 100%;
+        margin-top: 6px;
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        font-size: 12px;
+      }
 
-    .view-btn{
-    background:#333;
-    }
+      .phase-box {
+        margin-bottom: 14px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #f9fafb;
+        border: 1px solid #ececec;
+      }
 
-    .view-btn:hover{
-    background:#111;
-    }
+      .phase-header {
+        padding: 14px 16px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        cursor: pointer;
+        background: white;
+        border-radius: 12px;
+      }
 
+      .phase-content {
+        padding: 10px 10px 0 10px;
+      }
 
-    .report-options{
-display:flex;
-flex-direction:column;
-gap:10px;
-margin-top:12px;
-padding-top:10px;
-border-top:1px solid #eee;
-}
+      .arrow {
+        font-size: 14px;
+        color: #777;
+      }
 
-.report-option{
-display:flex;
-align-items:center;
-gap:8px;
-font-size:14px;
-}
+      .date-row {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+      }
 
-.report-option input{
-width:16px;
-height:16px;
-cursor:pointer;
-}
+      .date-row input {
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        font-size: 12px;
+      }
 
-.report-actions{
-margin-top:14px;
-display:flex;
-gap:10px;
-}
+      .phase-content {
+        display: none;
+      }
 
-.action-btn{
-padding:10px 12px;
-font-size:13px;
-border-radius:4px;
-height:36px;
-display:inline-flex;
-align-items:center;
-justify-content:center;
-}
+      .phase-content.open {
+        display: block;
+      }
 
+      .task-table {
+        margin-top: 10px;
+      }
+
+      .table-header,
+      .table-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px;
+      }
+
+      .table-row button {
+        padding: 6px 12px;
+        white-space: nowrap;
+      }
+
+      .table-header {
+        font-weight: 600;
+        font-size: 12px;
+        color: #777;
+        border-bottom: 1px solid #eee;
+      }
+
+      .table-row {
+        border-bottom: 1px solid #f5f5f5;
+      }
+
+      .table-row input,
+      .table-row select {
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        font-size: 12px;
+      }
+
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+
+      .modal-box {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        width: 350px;
+        max-height: 500px;
+        overflow: auto;
+      }
+
+      .check-item {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: center;
+      }
+
+      .watermark {
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+
+        font-size: 10px;
+        color: #aaa;
+        opacity: 0.5;
+
+        letter-spacing: 0.6px;
+        font-weight: 400;
+
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .watermark span {
+        font-weight: 500;
+        color: #666;
+      }
+
+      .info-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        font-size: 10px;
+        margin-left: 6px;
+        border-radius: 50%;
+        background: #e0e0e0;
+        color: #333;
+        cursor: default;
+      }
     </style>
-    </head>
+  </head>
 
-    <body>
-
+  <body>
     <div class="container">
+      <!-- HEADER -->
+      <div class="header">
+        <div class="progress-box">
+          <div class="progress-circle" id="progressValue">0%</div>
+          <div>
+            <div style="font-size: 12px; color: #777">Current Phase</div>
+            <div class="phase" id="phaseValue">-</div>
+          </div>
+        </div>
+        <div
+          id="companyBox"
+          style="display: flex; align-items: center; gap: 10px"
+        >
+          <div
+            id="welcomeText"
+            style="font-size: 14px; font-weight: 500; color: #555"
+          >
+            Welcome <span id="companyName">...</span>
+          </div>
+          <div
+            id="companyImagePlaceholder"
+            style="
+              width: 30px;
+              height: 30px;
+              border-radius: 50%;
+              background: #e0e0e0;
+            "
+          ></div>
+        </div>
+      </div>
 
-    <h2></h2>
+      <!-- TASK LIST -->
+      <div class="tasks" id="taskContainer">Loading tasks...</div>
 
-    <input id="addressInput" placeholder="Search suburb or address in Australia">
-
-    <div id="suggestions" class="dropdown"></div>
-
-    <div class="filters">
-
-    <select id="propertyType">
-    <option value="">Property Type</option>
-    <option value="House">House</option>
-    <option value="Apartment">Apartment</option>
-    <option value="Townhouse">Townhouse</option>
-    </select>
-
-    <select id="bedrooms">
-    <option value="">Beds</option>
-    <option value="1">1</option>
-    <option value="2">2</option>
-    <option value="3">3</option>
-    <option value="4">4</option>
-    </select>
-
-    <button onclick="searchProperty()">Search</button>
-
+      <!-- FOOTER -->
+      <div class="footer">
+        <button onclick="saveTasks()">Save Changes</button>
+      </div>
     </div>
-
-    <div id="selectedPropertyPanel"
-    style="display:none;margin-top:15px;border:1px solid #eee;padding:14px;border-radius:6px;background:#fafafa;">
-    
-    <b>Selected Property</b>
-    
-    <p id="selectedPropertyName"></p>
-    
-    <div class="report-options">
-    
-    <label class="report-option">
-    <input type="checkbox" id="climateCheck">
-    <span>Climate Analysis Report</span>
-    </label>
-    
-    <label class="report-option">
-    <input type="checkbox" id="cmaCheck">
-    <span>CMA</span>
-    </label>
-    
-    </div>
-    
-    <div class="report-actions">
-    
-        <button class="action-btn" onclick="generateReport()">Generate Report</button>
-    
-    <button class="view-btn" onclick="cancelReport()">Cancel</button>
-    
-    </div>
-    
-    </div>
-
-    <div id="results" class="results"></div>
 
     <script>
+      function showToast(message, isError = false) {
+        let toast = document.getElementById("toast");
 
-let selectedAddress="";
-const apiKey="a032bfd79fee4cf580e5b2439209c809";
+        if (!toast) {
+          toast = document.createElement("div");
+          toast.id = "toast";
+          document.body.appendChild(toast);
+        }
 
-let lastResultsHTML=""; // store results so cancel can restore
+        toast.innerText = message;
+        toast.className = "toast show " + (isError ? "error" : "success");
 
-const input=document.getElementById("addressInput");
-const dropdown=document.getElementById("suggestions");
+        setTimeout(() => {
+          toast.className = "toast";
+        }, 3000);
+      }
 
-input.addEventListener("input",async function(){
+      let recordId = null;
+      let recordData = null;
 
-const query=input.value;
+      /* ===== INIT ===== */
+      window.addEventListener("load", function () {
+        if (typeof ZOHO === "undefined") {
+          console.error("ZOHO SDK not loaded");
+          return;
+        }
 
-if(query.length<3){
-dropdown.innerHTML="";
-return;
-}
+        ZOHO.embeddedApp.on("PageLoad", function (data) {
+          // Ensure ID is a string and not an array
+          recordId = Array.isArray(data.EntityId)
+            ? data.EntityId[0]
+            : data.EntityId;
 
-const url=`https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&filter=countrycode:au&limit=5&apiKey=${apiKey}`;
+          // Only call if recordId exists
+          if (recordId) {
+            loadRecord(data.Entity);
+          }
+        });
 
-try{
+        ZOHO.embeddedApp.init();
+      });
 
-const response=await fetch(url);
-const data=await response.json();
+      /* ===== LOAD RECORD ===== */
+      function loadRecord(entity) {
+        ZOHO.CRM.API.getRecord({
+          Entity: entity,
+          RecordID: recordId,
+        }).then(function (res) {
+          if (!res || !res.data || res.data.length === 0) {
+            document.getElementById("taskContainer").innerText =
+              "No data found";
+            return;
+          }
 
-dropdown.innerHTML="";
+          recordData = res.data[0];
+          // console.log("FULL RECORD DATA:", recordData);
 
-data.features.forEach(feature=>{
+          renderHeader();
+          renderTasks();
+          loadOrgDetails();
+        });
+      }
 
-const item=document.createElement("div");
-item.innerText=feature.properties.formatted;
+      function loadOrgDetails() {
+        const companySpan = document.getElementById("companyName");
 
-item.onclick=function(){
+        // STEP 1 — Try org variable
+        ZOHO.CRM.API.getOrgVariable("company_name")
+          .then(function (res) {
+            // console.log("ORG VAR RESPONSE:", res);
 
-selectedAddress=feature.properties.formatted;
-input.value=selectedAddress;
-dropdown.innerHTML="";
+            let name = res?.Success?.Content;
 
-};
+            if (name) {
+              companySpan.innerText = name;
+            } else {
+              fallbackToUser();
+            }
+          })
+          .catch(function () {
+            fallbackToUser();
+          });
 
-dropdown.appendChild(item);
+        // STEP 2 — fallback (always works)
+        function fallbackToUser() {
+          ZOHO.CRM.CONFIG.getCurrentUser()
+            .then(function (res) {
+              // console.log("USER DATA:", res);
 
-});
+              let email = res?.users?.[0]?.email || "";
 
-}catch(e){
-console.error(e);
-}
+              if (email.includes("@")) {
+                let domain = email.split("@")[1];
+                let company = domain.split(".")[0];
 
-});
+                // Beautify
+                company = company.replace(/[^a-zA-Z]/g, "");
+                company = company.charAt(0).toUpperCase() + company.slice(1);
 
+                companySpan.innerText = company;
+              } else {
+                companySpan.innerText = "Your Company";
+              }
+            })
+            .catch(function () {
+              companySpan.innerText = "Your Company";
+            });
+        }
+      }
 
-function searchProperty(){
+      /* ===== HEADER RENDER ===== */
+      function renderHeader() {
+        const progress = recordData.Progress || 0;
 
-fetch("https://dummyjson.com/products?limit=20")
-.then(res=>res.json())
-.then(data=>renderResults(data.products));
+        const circle = document.getElementById("progressValue");
+        const phase = recordData.Phase || "-";
+        document.getElementById("phaseValue").innerText = phase;
+        circle.innerText = progress + "%";
+        circle.style.setProperty("--progress", progress + "%");
+      }
 
-}
+      /* ===== TASK RENDER (TEMP PLACEHOLDER) ===== */
+      function renderTasks() {
+        const container = document.getElementById("taskContainer");
+        const tasks = recordData.Tasklists;
+        console.log("TASKLIST RAW:", tasks);
+        if (!tasks || tasks.length === 0) {
+          container.innerHTML = "No tasks found";
+          return;
+        }
 
+        // Phase order (must match your system)
+        const phases = [
+          "Property Brief",
+          "Location Selection",
+          "Sourcing",
+          "Due Diligence",
+          "Settlement & Handover",
+        ];
 
-function renderResults(properties){
+        let grouped = {};
+        phases.forEach((p) => (grouped[p] = []));
 
-let type=document.getElementById("propertyType").value;
-let beds=document.getElementById("bedrooms").value;
+        let currentPhase = null;
 
-let html="";
+        // STEP 1: Group tasks based on headings
+        tasks.forEach((row, index) => {
+          const name = row.Task_Name || row.Task_Name1 || "";
 
-properties.forEach(p=>{
+          if (!name) {
+            console.warn("Missing Task_Name field:", row);
+            return;
+          }
 
-let propertyType=["House","Apartment","Townhouse"][Math.floor(Math.random()*3)];
-let bedrooms=Math.floor(Math.random()*4)+1;
+          // Detect heading rows
+          // Detect heading rows (supports ===, ---, ▶▶▶)
+          if (
+            name.includes("===") ||
+            name.includes("---") ||
+            name.includes("▶")
+          ) {
+            currentPhase = name
+              .replace(/=+/g, "")
+              .replace(/-+/g, "")
+              .replace(/▶+/g, "") // 🔥 handles ▶▶▶
+              .trim()
+              .toLowerCase();
 
-if(type && type!==propertyType) return;
-if(beds && bedrooms!=beds) return;
+            // console.log("Detected Phase Heading:", currentPhase);
 
-html+=`
-<div class="property">
+            return;
+          }
 
-<h3>${p.title}</h3>
+          const matchedPhase = phases.find((p) =>
+            currentPhase.includes(p.toLowerCase())
+          );
 
-<p><b>Address:</b> ${selectedAddress || "Sydney NSW, Australia"}</p>
+          if (matchedPhase) {
+            grouped[matchedPhase].push({ ...row, index });
+          } else {
+            console.warn("No phase match → forcing into first phase:", name);
+            grouped[phases[0]].push({ ...row, index });
+          }
+        });
 
-<p><b>Type:</b> ${propertyType}</p>
+        // STEP 2: Render accordion
+        let html = "";
 
-<p><b>Bedrooms:</b> ${bedrooms}</p>
+        const activePhase = recordData.Phase || "";
 
-<p><b>Price:</b> $${p.price}</p>
+        phases.forEach((phase, i) => {
+          let extractedPhase = "";
 
-<div class="actions">
+          if (activePhase && activePhase.includes(":")) {
+            extractedPhase = activePhase.split(":")[1].trim();
+          } else {
+            extractedPhase = activePhase;
+          }
 
-<div style="margin-top:8px; display:flex; gap:8px;">
+          const isOpen = extractedPhase.toLowerCase() === phase.toLowerCase(); // current phase open
 
-<button class="view-btn"
-onclick="viewListings('${selectedAddress}')">
-View Listings
-</button>
+          html += `
+    <div class="phase-box">
 
-<button class="action-btn" onclick="analysisReport('${selectedAddress}','${p.title}')">
-Analysis Report
-</button>
+        <div class="phase-header" onclick="togglePhase('${phase}')">
+            <span>${i + 1}. ${phase}</span>
+            <span class="arrow">${isOpen ? "▲" : "▼"}</span>
+        </div>
 
+        <div class="phase-content ${
+          isOpen ? "open" : ""
+        }" id="phase-${phase.replace(/[^a-zA-Z0-9]/g, "")}">
+    `;
+          html += `
+<div class="task-table">
+
+    <div class="table-header">
+        <div>Task</div>
+        <div>Status</div>
+        <div>Priority</div>
+        <div>Start</div>
+        <div>Due</div>
+        <div>✔</div>
+    </div>
+`;
+          grouped[phase].forEach((task) => {
+            html += `
+<div class="table-row">
+
+    <div class="task-name">
+    ${task.Task_Name}
+    ${
+      task.Description
+        ? `<span class="info-icon" title="${task.Description.replace(
+            /"/g,
+            "&quot;"
+          )}">i</span>`
+        : ""
+    }
 </div>
 
-</div>
+    <select onchange="updateStatus(${task.index}, this.value)">
+        <option ${task.Status === "Open" ? "selected" : ""}>Open</option>
+        <option ${
+          task.Status === "In Progress" ? "selected" : ""
+        }>In Progress</option>
+        <option ${task.Status === "On Hold" ? "selected" : ""}>On Hold</option>
+        <option ${
+          task.Status === "Escalate" ? "selected" : ""
+        }>Escalate</option>
+        <option ${task.Status === "Delayed" ? "selected" : ""}>Delayed</option>
+        <option ${
+          task.Status === "Completed" ? "selected" : ""
+        }>Completed</option>
+    </select>
+
+    <select onchange="updateField(${task.index}, 'Priority', this.value)">
+        <option ${task.Priority === "None" ? "selected" : ""}>None</option>
+        <option ${task.Priority === "Low" ? "selected" : ""}>Low</option>
+        <option ${task.Priority === "Normal" ? "selected" : ""}>Normal</option>
+        <option ${task.Priority === "High" ? "selected" : ""}>High</option>
+    </select>
+
+    <input type="date"
+    value="${task.Start_Date || ""}"
+    onchange="updateField(${
+      task.index
+    }, 'Start_Date', this.value); handleDateChange(${task.index})"
+/>
+
+    <input type="date"
+    value="${task.Due_Date || ""}"
+    onchange="updateField(${
+      task.index
+    }, 'Due_Date', this.value); handleDateChange(${task.index})"
+/>
+
+    ${
+      task.Task_Name === "Property Shortlisted for Offer"
+        ? `<button onclick="openComparableSales(${task.index})">
+        Comparable Sales
+        </button>`
+        : `<button onclick="openChecklist(${task.index})">
+        Checklist
+        </button>`
+    }
 
 </div>
 `;
+          });
 
-});
+          html += `
+</div> <!-- task-table -->
+</div> <!-- phase-content -->
+</div> <!-- phase-box -->
+`;
+        });
 
-document.getElementById("results").innerHTML=html;
-lastResultsHTML=html;
+        container.innerHTML = html;
+      }
 
-}
+      function togglePhase(phase) {
+        const safePhase = phase.replace(/[^a-zA-Z0-9]/g, "");
+        const content = document.getElementById("phase-" + safePhase);
 
+        if (!content) return;
 
-function viewListings(address){
+        const isOpen = content.classList.contains("open");
 
-if(!address){
-address="Sydney NSW";
-}
+        // CLOSE ALL FIRST
+        document.querySelectorAll(".phase-content").forEach((el) => {
+          el.classList.remove("open");
+        });
 
-let url="https://www.realestate.com.au/buy/in-"+encodeURIComponent(address)+"/list-1";
+        document.querySelectorAll(".arrow").forEach((a) => {
+          a.innerText = "▼";
+        });
 
-window.open(url,"_blank");
+        //  OPEN ONLY IF IT WAS CLOSED
+        if (!isOpen) {
+          content.classList.add("open");
 
-}
+          const header = content.previousElementSibling;
+          const arrow = header.querySelector(".arrow");
+          if (arrow) arrow.innerText = "▲";
+        }
+      }
 
+      function updateStatus(index, value) {
+        recordData.Tasklists[index].Status = value;
+      }
 
-function analysisReport(address, propertyName){
+      function markComplete(index) {
+        recordData.Tasklists[index].Status = "Completed";
+        renderTasks(); // refresh UI
+      }
 
-document.getElementById("addressInput").value = address;
+      function saveTasks() {
+        const tasks = recordData.Tasklists;
 
-/* hide filters */
-document.querySelector(".filters").style.display = "none";
+        if (!tasks || tasks.length === 0) {
+          showToast("No tasks to update", true);
+          return;
+        }
 
-/* hide results */
-document.getElementById("results").style.display = "none";
+        // Map the rows
+        let updatedRows = tasks.map((row) => {
+          let cleanObj = {
+            id: String(row.id),
+            Task_Name: row.Task_Name,
+          };
 
-/* show selected property panel */
-document.getElementById("selectedPropertyPanel").style.display = "block";
+          const isHeading =
+            row.Task_Name &&
+            (row.Task_Name.includes("===") || row.Task_Name.includes("---"));
 
-/* display selected property */
-document.getElementById("selectedPropertyName").innerText =
-propertyName + " — " + address;
+          if (isHeading) {
+            return cleanObj;
+          }
 
-}
+          // ALWAYS send full structure for subform rows
+          cleanObj.Status = row.Status || "Open";
+          cleanObj.Priority = row.Priority || "Normal";
 
-function cancelReport(){
+          //  IMPORTANT: Always send Checklist (even if empty string)
+          cleanObj.Checklist = row.Checklist || "";
 
-/* show filters again */
-document.querySelector(".filters").style.display = "flex";
+          // Optional fields
+          if (row.Start_Date) cleanObj.Start_Date = row.Start_Date;
+          if (row.Due_Date) cleanObj.Due_Date = row.Due_Date;
+          if (row.Description !== undefined)
+            cleanObj.Description = row.Description || "";
 
-/* hide selected property panel */
-document.getElementById("selectedPropertyPanel").style.display = "none";
+          return cleanObj;
+        });
 
-/* show search results again */
-document.getElementById("results").style.display = "block";
+        // CONSTRUCTION CHECK:
+        // The "id" inside the data array is the Acquisition Record ID.
+        // The "id" inside Tasklists is the Subform Row ID.
+        const config = {
+          Entity: "Acquisitions",
+          APIData: {
+            id: recordId.toString(),
+            Tasklists: updatedRows,
 
-}
+            B_P_Completion_In_Days: recordData.B_P_Completion_In_Days,
+            B_P_Completion_Due_Date: recordData.B_P_Completion_Due_Date,
 
-/* GENERATE REPORT */
+            Finance_Approval_In_Days: recordData.Finance_Approval_In_Days,
+            Finance_Approval_Due_Date: recordData.Finance_Approval_Due_Date,
 
-function generateReport(){
+            Settlement_In_Days: recordData.Settlement_In_Days,
+            Settlement_Due_Date: recordData.Settlement_Due_Date,
+          },
+          Trigger: ["workflow"], // Optional: triggers workflows if needed
+        };
 
-if(!document.getElementById("climateCheck").checked){
+        // console.log("FINAL ATTEMPT CONFIG:", config);
+        //     console.log("CHECKLIST FIELD:", updatedRows.map(r => ({
+        //     id: r.id,
+        //     checklist: r.Checklist
+        // })));
 
-alert("Please select Climate Report");
+        ZOHO.CRM.API.updateRecord(config)
+          .then(function (res) {
+            // Zoho Sandbox sometimes returns the result inside an array, sometimes not
+            const result = Array.isArray(res.data) ? res.data[0] : res;
 
-return;
+            if (result.code === "SUCCESS" || result.status === "success") {
+              showToast("Tasks updated successfully. Refresh Page.");
+              setTimeout(() => {
+                localStorage.setItem("openPhase", recordData.Phase || "");
+                location.reload();
+              }, 800);
+            } else {
+              console.error("Detailed API Error:", result);
+              showToast("Error: " + (result.message || "Check Console"), true);
+            }
+          })
+          .catch(function (err) {
+            console.error("Actual Error Object:", err);
+            // This helper will drill into the error you saw earlier
+            if (err.data && err.data[0]) {
+              console.error("Zoho Specific Error:", err.data[0].details);
+            }
+            showToast("Update failed", true);
+          });
+      }
 
-}
+      function handleDateChange(index) {
+        const task = recordData.Tasklists[index];
 
-window.open(
-"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-);
+        if (!task.Start_Date || !task.Due_Date) return;
 
-}
+        const start = new Date(task.Start_Date);
+        const due = new Date(task.Due_Date);
 
+        if (isNaN(start) || isNaN(due)) return;
 
-/* RESET IF FIELD CLEARED */
+        const days = Math.ceil((due - start) / (1000 * 60 * 60 * 24));
+        if (days < 0) return;
 
-document.getElementById("addressInput").addEventListener("input",function(){
+        const name = task.Task_Name;
 
-if(this.value===""){
+        //  B&P (ONLY this task)
+        if (name === "B&P Completed") {
+          recordData.B_P_Completion_In_Days = days;
+          recordData.B_P_Completion_Due_Date = task.Due_Date;
+        }
 
-document.querySelector(".filters").style.display="flex";
+        // Finance
+        if (name === "Finance Approval") {
+          recordData.Finance_Approval_In_Days = days;
+          recordData.Finance_Approval_Due_Date = task.Due_Date;
+        }
 
-document.getElementById("selectedPropertyPanel").style.display="none";
+        // Settlement (2 tasks)
+        if (
+          name === "Conveyancer Settlement Confirmation" ||
+          name === "Confirm Settlement Completion"
+        ) {
+          recordData.Settlement_In_Days = days;
+          recordData.Settlement_Due_Date = task.Due_Date;
+        }
 
-document.getElementById("results").innerHTML="";
+        console.log("Mapped Task:", name, "Days:", days);
+      }
 
-}
+      function updateField(index, field, value) {
+        recordData.Tasklists[index][field] = value;
+      }
 
-});
+      // ===== CHECKLIST LOGIC =====
 
+      let checklistState = {};
 
-ZOHO.embeddedApp.on("PageLoad", function(data) {
-console.log("Widget loaded", data);
-});
+      // Parse text → array
+      function parseChecklist(text) {
+        if (!text || typeof text !== "string") return [];
 
-ZOHO.embeddedApp.init();
+        return text
+          .replace(/\r/g, "") // handle Windows line breaks
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+          .map((line) => {
+            const match = line.match(/(.*)\[(.*)\]/);
 
+            if (match) {
+              return {
+                label: match[1].trim(),
+                status: match[2].trim(),
+              };
+            }
+
+            return {
+              label: line,
+              status: "Not Done",
+            };
+          });
+      }
+      // Build array → text
+      function buildChecklistText(items) {
+        return items.map((item) => `${item.label} [${item.status}]`).join("\n");
+      }
+
+      // Open popup
+      function openChecklist(index) {
+        const raw = recordData.Tasklists[index].Checklist;
+        const items = parseChecklist(raw);
+
+        checklistState[index] = items;
+
+        let html = `
+    <div class="modal-overlay">
+        <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0;">Checklist</h3>
+        <span style="cursor:pointer; font-size:18px;" onclick="closeChecklist()">✖</span>
+    </div>
+    `;
+
+        if (items.length === 0) {
+          html += `<p style="color:#777;">No checklists found</p>`;
+        } else {
+          items.forEach((item, i) => {
+            html += `
+        <div class="check-item">
+            <input type="checkbox"
+                ${item.status.toLowerCase() === "done" ? "checked" : ""}
+                onchange="updateChecklistItem(${index}, ${i}, this.checked)"
+            />
+            <span>${item.label}</span>
+        </div>
+        `;
+          });
+        }
+
+        html += `
+            <button onclick="saveChecklist(${index})">Done</button>
+        </div>
+    </div>
+    `;
+
+        document.body.insertAdjacentHTML("beforeend", html);
+        // console.log("RAW CHECKLIST:", raw);
+      }
+
+      // Update checkbox state
+      function updateChecklistItem(taskIndex, itemIndex, checked) {
+        checklistState[taskIndex][itemIndex].status = checked
+          ? "Done"
+          : "Not Done";
+      }
+
+      // Save checklist back to Notes
+      function saveChecklist(index) {
+        const items = checklistState[index];
+        if (!items) return;
+
+        const text = buildChecklistText(items);
+
+        recordData.Tasklists[index].Checklist = text;
+
+        document.querySelector(".modal-overlay").remove();
+      }
+
+      function closeChecklist() {
+        const modal = document.querySelector(".modal-overlay");
+
+        if (modal) {
+          modal.remove();
+        }
+      }
+      // =============================================
+      // COMPARABLE SALES POPUP
+      // =============================================
+
+      async function openComparableSales(index) {
+        const task = recordData.Tasklists[index];
+
+        let html = `
+<div class="modal-overlay">
+    <div class="modal-box" style="
+    width:850px;
+    max-width:95%;
+    max-height:85vh;
+    overflow:auto;
+">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0;">Comparable Sales Evidence</h3>
+
+            <span
+                style="cursor:pointer; font-size:18px;"
+                onclick="closeComparableSales()"
+            >
+                ✖
+            </span>
+        </div>
+
+        <div id="comparableSalesContent">
+
+            <div style="padding:20px; text-align:center; color:#777;">
+                Fetching comparable sales...
+            </div>
+
+        </div>
+
+    </div>
+</div>
+`;
+
+        document.body.insertAdjacentHTML("beforeend", html);
+
+        try {
+          // ---------------------------------------------
+          // GET ACQUISITION ADDRESS
+          // ---------------------------------------------
+
+          // =============================================
+          // FETCH ACQUISITION RECORD
+          // =============================================
+
+          const acquisitionResponse = await ZOHO.CRM.API.getRecord({
+            Entity: "Acquisitions",
+            RecordID: recordId,
+          });
+
+          console.log("ACQUISITION RESPONSE:", acquisitionResponse);
+
+          if (
+            !acquisitionResponse ||
+            !acquisitionResponse.data ||
+            acquisitionResponse.data.length === 0
+          ) {
+            document.getElementById("comparableSalesContent").innerHTML = `
+        <div style="color:red;">
+            Acquisition record not found.
+        </div>
+    `;
+            return;
+          }
+
+          const acquisitionData = acquisitionResponse.data[0];
+
+          console.log("ACQUISITION DATA:", acquisitionData);
+
+          // =============================================
+          // INTERESTED PROPERTY ID
+          // =============================================
+
+          const interestedPropertyId =
+            acquisitionData.Interested_Property_ID || "";
+          window.currentInterestedPropertyId = interestedPropertyId;
+
+          if (!interestedPropertyId) {
+            document.getElementById("comparableSalesContent").innerHTML = `
+        <div style="color:red;">
+            No Interested Property linked yet.
+        </div>
+    `;
+
+            return;
+          }
+
+          console.log("INTERESTED PROPERTY ID:", interestedPropertyId);
+
+          // =============================================
+          // FETCH PROPERTY RECORD
+          // =============================================
+
+          const propertyResponse = await ZOHO.CRM.API.getRecord({
+            Entity: "Properties",
+            RecordID: interestedPropertyId,
+          });
+
+          console.log("PROPERTY RESPONSE:", propertyResponse);
+
+          if (
+            !propertyResponse ||
+            !propertyResponse.data ||
+            propertyResponse.data.length === 0
+          ) {
+            document.getElementById("comparableSalesContent").innerHTML = `
+        <div style="color:red;">
+            Property record not found.
+        </div>
+    `;
+            return;
+          }
+
+          const propertyRecord = propertyResponse.data[0];
+
+          console.log("PROPERTY RECORD:", propertyRecord);
+
+          const addressKey = propertyRecord.Address_Key || "";
+
+          console.log("PROPERTY ADDRESS KEY:", addressKey);
+          // =============================================
+          // ADDRESS BUILDING
+          // =============================================
+
+          let acquisitionAddress = propertyRecord.Address || "";
+
+          const suburb = propertyRecord.Suburb || "";
+
+          const postcode = propertyRecord.Postcode || "";
+
+          // Remove weird spaces
+          acquisitionAddress = acquisitionAddress.replace(/\s+/g, " ").trim();
+
+          // If suburb missing → append
+          if (
+            suburb &&
+            !acquisitionAddress.toLowerCase().includes(suburb.toLowerCase())
+          ) {
+            acquisitionAddress += `, ${suburb}`;
+          }
+
+          // If postcode missing → append
+          if (postcode && !acquisitionAddress.includes(postcode)) {
+            acquisitionAddress += ` ${postcode}`;
+          }
+
+          // FINAL SAFETY CLEANUP
+          acquisitionAddress = acquisitionAddress
+            .replace(/,\s*,/g, ",")
+            .replace(/\s+/g, " ")
+            .replace(/,+$/g, "")
+            .trim();
+
+          // =============================================
+          // FALLBACK ADDRESS SEARCH
+          // =============================================
+
+          const searchAddress = acquisitionAddress.split(",")[0].trim();
+
+          console.log("HTAG SEARCH ADDRESS:", searchAddress);
+
+          if (!acquisitionAddress) {
+            document.getElementById("comparableSalesContent").innerHTML = `
+        <div style="color:red;">
+            Property address not found.
+        </div>
+    `;
+
+            return;
+          }
+
+          console.log("FINAL ADDRESS:", acquisitionAddress);
+
+          // =============================================
+          // BACKEND CALL
+          // =============================================
+
+          const backendUrl = `https://project-rainfall-7006542512.development.catalystserverless.com.au/server/getComparableSales`;
+          console.log("CALLING:", backendUrl);
+
+          // =============================================
+          // GET CURRENT CRM USER
+          // =============================================
+
+          // =============================================
+          // GET CURRENT CRM USER
+          // =============================================
+
+          const currentUserResponse = await ZOHO.CRM.CONFIG.getCurrentUser();
+
+          const currentUser = currentUserResponse?.users?.[0] || {};
+
+          // =============================================
+          // GET CURRENT ORG INFO
+          // =============================================
+
+          const orgInfoResponse = await ZOHO.CRM.CONFIG.getOrgInfo();
+
+          console.log("ORG INFO RESPONSE:", orgInfoResponse);
+
+          const currentOrg = orgInfoResponse?.org?.[0] || {};
+
+          console.log("FINAL ORG OBJECT:", currentOrg);
+
+          // =============================================
+          // BUILD REQUEST HEADERS
+          // =============================================
+
+          const requestHeaders = {
+            "x-org-id":
+              currentOrg.zgid ||
+              currentOrg.company_name ||
+              currentOrg.id ||
+              "Unknown Org",
+
+            "x-crm-user":
+              currentUser.full_name || currentUser.email || "Unknown User",
+
+            "x-record-id": recordId || "Unknown Record",
+          };
+
+          // =============================================
+          // BACKEND REQUEST
+          // =============================================
+
+          const response = await fetch(
+            backendUrl +
+              "?address=" +
+              encodeURIComponent(acquisitionAddress) +
+              "&address_key=" +
+              encodeURIComponent(addressKey),
+
+            {
+              method: "GET",
+
+              credentials: "include",
+
+              headers: requestHeaders,
+            }
+          );
+
+          const responseText = await response.text();
+
+          let soldData;
+
+          try {
+            soldData = JSON.parse(responseText);
+          } catch (e) {
+            console.error("INVALID JSON RESPONSE:", responseText);
+
+            throw new Error(responseText);
+          }
+
+          if (response.status === 401) {
+            window.open(
+              "https://project-rainfall-7006542512.development.catalystserverless.com.au/__catalyst/auth/login?service_url=/app/auth-success.html",
+
+              "_blank",
+
+              "width=500,height=700"
+            );
+
+            document.getElementById("comparableSalesContent").innerHTML = `
+    <div style="
+        padding:20px;
+        text-align:center;
+        color:#555;
+    ">
+
+        Authentication required.
+
+        <br><br>
+
+        Please login and click Comparable Sales again.
+
+    </div>
+`;
+
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error(
+              soldData.message || `Backend Error: ${response.status}`
+            );
+          }
+
+          console.log("FINAL SOLD DATA:", soldData);
+
+          console.log("FINAL SOLD DATA:", soldData);
+
+          // =============================================
+          // HANDLE API ERRORS
+          // =============================================
+
+          if (soldData.error) {
+            document.getElementById("comparableSalesContent").innerHTML = `
+    <div style="
+        padding:20px;
+        border-radius:12px;
+        background:#fff5f5;
+        border:1px solid #ffcdd2;
+        color:#c62828;
+    ">
+
+        <div style="
+            font-size:16px;
+            font-weight:600;
+            margin-bottom:12px;
+        ">
+            No Comparable Sales Found
+        </div>
+
+        <div style="
+            font-size:13px;
+            margin-bottom:10px;
+        ">
+            HTAG could not find comparable sales for:
+        </div>
+
+        <div style="
+            background:white;
+            border:1px dashed #ef9a9a;
+            padding:12px;
+            border-radius:8px;
+            color:#333;
+            font-size:13px;
+            word-break:break-word;
+        ">
+            ${acquisitionAddress}
+        </div>
+
+    </div>
+`;
+
+            return;
+          }
+
+          // ---------------------------------------------
+          // SOLD RESULTS
+          // ---------------------------------------------
+
+          const soldResults = soldData.comparable_sales || [];
+
+          if (soldResults.length === 0) {
+            document.getElementById("comparableSalesContent").innerHTML = `
+    <div style="
+        padding:20px;
+        border-radius:12px;
+        background:#fff8e1;
+        border:1px solid #ffe082;
+        color:#8d6e63;
+    ">
+        No sold properties found nearby for:
+        <br><br>
+        <b>${acquisitionAddress}</b>
+    </div>
+`;
+
+            return;
+          }
+
+          // ---------------------------------------------
+          // STEP 3 - ANALYZE & RENDER UI
+          // ---------------------------------------------
+
+          const validPrices = soldResults
+            .map((p) => p.sold_price)
+            .filter((price) => price !== null && price > 0);
+
+          const maxPrice = validPrices.length ? Math.max(...validPrices) : 0;
+          const minPrice = validPrices.length ? Math.min(...validPrices) : 0;
+
+          // Build the text version for CRM Notes
+          let notesText = `Comparable Sales Analysis\n`;
+          notesText += `Market Ceiling: $${maxPrice.toLocaleString()}\n`;
+          notesText += `Market Floor: $${minPrice.toLocaleString()}\n\n`;
+
+          soldResults.forEach((p, i) => {
+            notesText += `${i + 1}. ${p.street_address}: $${(
+              p.sold_price || 0
+            ).toLocaleString()} (${p.bedrooms}b/${p.bathrooms}ba)\n`;
+          });
+
+          // Generate the Visual Table HTML
+          let tableRows = soldResults
+            .map(
+              (p) => `
+        <tr style="border-bottom:1px solid #eee; font-size:12px;">
+            <td style="padding:10px;"><b>${
+              p.street_address
+            }</b><br><span style="color:#777;">${p.suburb}</span></td>
+            <td style="padding:10px;">$${(
+              p.sold_price || 0
+            ).toLocaleString()}</td>
+            <td style="padding:10px; color:#555;">${
+              p.property_type || "Property"
+            }
+<br>
+${p.bedrooms}b | ${p.bathrooms}ba</td>
+            <td style="padding:10px; font-size:11px;">${p.sold_date}</td>
+        </tr>
+    `
+            )
+            .join("");
+
+          document.getElementById("comparableSalesContent").innerHTML = `
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <div style="flex:1; background:#e8f5e9; padding:12px; border-radius:8px; border:1px solid #c8e6c9; text-align:center;">
+                <div style="font-size:10px; color:#2e7d32; font-weight:600;">MARKET CEILING</div>
+                <div style="font-size:18px; font-weight:700;">$${maxPrice.toLocaleString()}</div>
+            </div>
+            <div style="flex:1; background:#ffebee; padding:12px; border-radius:8px; border:1px solid #ffcdd2; text-align:center;">
+                <div style="font-size:10px; color:#c62828; font-weight:600;">MARKET FLOOR</div>
+                <div style="font-size:18px; font-weight:700;">$${minPrice.toLocaleString()}</div>
+            </div>
+        </div>
+
+        <div style="max-height:260px; overflow:auto; border:1px solid #eee; border-radius:8px;">
+            <table style="width:100%; border-collapse:collapse; text-align:left;">
+                <thead style="background:#f9fafb; position:sticky; top:0;">
+                    <tr>
+                        <th style="padding:10px; font-size:11px; color:#666;">Address</th>
+                        <th style="padding:10px; font-size:11px; color:#666;">Price</th>
+                        <th style="padding:10px; font-size:11px; color:#666;">Specs</th>
+                        <th style="padding:10px; font-size:11px; color:#666;">Date</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        </div>
+
+        <div style="
+    font-size:11px;
+    color:#c62828;
+    margin-bottom:10px;
+">
+    Results shown are based on comparable properties
+    sold within a 2km radius of the selected property.
+</div>
+
+        <div style="margin-top:16px; text-align:right;">
+            <button onclick="saveComparableSalesNotes(\`${encodeURIComponent(
+              notesText
+            )}\`)">
+                Attach To Notes
+            </button>
+        </div>
+    `;
+        } catch (error) {
+          console.error("COMPARABLE SALES ERROR:", error);
+
+          let errorMessage =
+            "Unknown error. please contact support@agenttime.au.";
+
+          // Zoho SDK errors
+          if (error.message) {
+            errorMessage = error.message;
+          }
+
+          // Backend JSON errors
+          if (error.error) {
+            errorMessage = error.error;
+          }
+
+          // Express/API returned JSON
+          if (error.responseJSON && error.responseJSON.message) {
+            errorMessage = error.responseJSON.message;
+          }
+
+          // Raw string fallback
+          if (typeof error === "string") {
+            errorMessage = error;
+          }
+
+          document.getElementById("comparableSalesContent").innerHTML = `
+    <div style="color:red;">
+        Failed to load comparable sales. please contact support@agenttime.au.
+
+        <br><br>
+
+        Error:
+
+        <br><br>
+
+        ${error.message}
+    </div>
+`;
+        }
+      }
+
+      // =============================================
+      // SAVE NOTES
+      // =============================================
+
+      async function saveComparableSalesNotes(encodedText) {
+        try {
+          const notesText = decodeURIComponent(encodedText);
+
+          if (!notesText || notesText.trim() === "") {
+            showToast(
+              "No comparable sales data to save. Try again later.",
+              true
+            );
+
+            return;
+          }
+
+          // ---------------------------------------------
+          // CREATE ZOHO NOTE RELATED LIST
+          // ---------------------------------------------
+
+          await ZOHO.CRM.API.insertRecord({
+            Entity: "Notes",
+
+            APIData: {
+              Note_Title: "Comparable Sales Evidence",
+
+              Note_Content: notesText,
+
+              Parent_Id: recordId,
+
+              se_module: "Acquisitions",
+            },
+
+            Trigger: ["workflow"],
+          });
+
+          // ---------------------------------------------
+          // CREATE PROPERTY NOTE
+          // ---------------------------------------------
+
+          await ZOHO.CRM.API.insertRecord({
+            Entity: "Notes",
+
+            APIData: {
+              Note_Title: "Comparable Sales Evidence",
+
+              Note_Content: notesText,
+
+              Parent_Id: window.currentInterestedPropertyId,
+
+              se_module: "Properties",
+            },
+
+            Trigger: ["workflow"],
+          });
+
+          showToast("Comparable sales added to Notes successfully.");
+
+          closeComparableSales();
+        } catch (error) {
+          console.error(error);
+
+          showToast(
+            "Failed to save comparable sales notes. please contact support@agenttime.au.",
+            true
+          );
+        }
+      }
+
+      // =============================================
+      // CLOSE POPUP
+      // =============================================
+
+      function closeComparableSales() {
+        const modal = document.querySelector(".modal-overlay");
+
+        if (modal) {
+          modal.remove();
+        }
+      }
     </script>
-
-    </body>
-    </html>
+    <div class="watermark">Powered by <span>Agent Time × HtAG</span></div>
+  </body>
+</html>

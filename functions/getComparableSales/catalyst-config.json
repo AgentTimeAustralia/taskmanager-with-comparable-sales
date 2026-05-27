@@ -1,0 +1,11 @@
+{
+	"deployment": {
+		"name": "getcomparablesales",
+		"stack": "node20",
+		"type": "advancedio",
+		"env_variables": {}
+	},
+	"execution": {
+		"main": "index.js"
+	}
+}
