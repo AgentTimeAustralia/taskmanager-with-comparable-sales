@@ -27,12 +27,22 @@ module.exports = async (req, res) => {
 
   if (req.method === "OPTIONS") {
     res.writeHead(200);
-
+  
     res.end();
-
+  
     return;
   }
-
+  
+  let startTime;
+  
+  let usageBreakdown = [];
+  
+  let totalBillingUnits = 0;
+  
+  let totalBillingCost = 0;
+  
+  let currentBillingBalance = null;
+  
   try {
     // =============================================
     // AUTHENTICATION CHECK
@@ -56,6 +66,13 @@ module.exports = async (req, res) => {
 
       return;
     }
+
+    // =============================================
+    // EXECUTION TIMER + BILLING TRACKING
+    // =============================================
+
+    startTime = Date.now();
+
     // ============================================
     // GET ADDRESS FROM QUERY PARAMS
     // ============================================
@@ -131,6 +148,34 @@ module.exports = async (req, res) => {
 
       const standardiseData = await standardiseResponse.json();
 
+      // ============================================
+      // BILLING TRACKING
+      // ============================================
+
+      totalBillingUnits += Number(
+        standardiseResponse.headers.get("x-billing-units") || 0
+      );
+
+      usageBreakdown.push(
+        `address/standardise = ${
+          standardiseResponse.headers.get("x-billing-units") || 0
+        } units`
+      );
+
+      totalBillingCost += Number(
+        standardiseResponse.headers.get("x-billing-cost") || 0
+      );
+
+      usageBreakdown.push(
+        `address/standardise = ${
+          standardiseResponse.headers.get("x-billing-cost") || 0
+        } cost`
+      );
+
+      currentBillingBalance =
+        standardiseResponse.headers.get("x-billing-balance") ||
+        currentBillingBalance;
+
       console.log(
         "HTAG STANDARDISE RESPONSE:",
         JSON.stringify(standardiseData, null, 2)
@@ -202,7 +247,6 @@ module.exports = async (req, res) => {
       `&limit=5`;
 
     console.log("HTAG SOLD SEARCH URL:", soldSearchUrl);
-    const startTime = Date.now();
 
     const soldResponse = await fetch(soldSearchUrl, {
       method: "GET",
@@ -214,19 +258,57 @@ module.exports = async (req, res) => {
     const soldData = await soldResponse.json();
 
     // ============================================
+    // BILLING TRACKING
+    // ============================================
+
+    totalBillingUnits += Number(
+      soldResponse.headers.get("x-billing-units") || 0
+    );
+
+    usageBreakdown.push(
+      `property/sold/search = ${
+        soldResponse.headers.get("x-billing-units") || 0
+      } units`
+    );
+
+    totalBillingCost += Number(soldResponse.headers.get("x-billing-cost") || 0);
+
+    usageBreakdown.push(
+      `property/sold/search = ${
+        soldResponse.headers.get("x-billing-cost") || 0
+      } cost`
+    );
+
+    currentBillingBalance =
+      soldResponse.headers.get("x-billing-balance") || currentBillingBalance;
+
+    // ============================================
     // Inserting Log To Data Storage
     // ============================================
 
-    await usageTable.insertRow({
-      Org_ID: req.headers["x-org-id"] || "Unknown Org",
-      CRM_User: req.headers["x-crm-user"] || "Unknown User",
-      Function_Name: "getComparableSales",
-      Feature_Name: "Comparable Sales",
-      Record_ID: req.headers["x-record-id"] || "Unknown Record",
-      Execution_Time_MS: Date.now() - startTime,
-      Status: soldResponse.ok ? "success" : "error",
-      API_Consumption: 1,
-    });
+    try {
+      await usageTable.insertRow({
+        Org_ID: req.headers["x-org-id"] || "Unknown Org",
+    
+        CRM_User: req.headers["x-crm-user"] || "Unknown User",
+    
+        Function_Name: "getComparableSales",
+    
+        Feature_Name: "Comparable Sales",
+    
+        Record_ID: req.headers["x-record-id"] || "Unknown Record",
+    
+        Execution_Time_MS: Date.now() - startTime,
+    
+        Status: soldResponse.ok ? "success" : "error",
+    
+        API_Consumption: totalBillingUnits,
+    
+        Usage_Response: usageBreakdown.join("\n"),
+      });
+    } catch (loggingError) {
+      console.error("LOGGING ERROR:", loggingError);
+    }
 
     console.log(
       "HTAG SOLD SEARCH RESPONSE:",
@@ -311,12 +393,45 @@ module.exports = async (req, res) => {
       })
     );
   } catch (error) {
-    console.error("SERVER ERROR:", error);
 
+    try {
+  
+      await usageTable.insertRow({
+  
+        Org_ID: req.headers["x-org-id"] || "Unknown Org",
+  
+        CRM_User: req.headers["x-crm-user"] || "Unknown User",
+  
+        Function_Name: "getComparableSales",
+  
+        Feature_Name: "Comparable Sales",
+  
+        Record_ID: req.headers["x-record-id"] || "Unknown Record",
+  
+        Execution_Time_MS: Date.now() - startTime,
+  
+        Status: "failed",
+  
+        API_Consumption: totalBillingUnits || 0,
+  
+        Usage_Response:
+          (usageBreakdown || []).join("\n") +
+          "\nERROR: " +
+          (error.message || "Unknown Error"),
+      });
+  
+    } catch (loggingError) {
+  
+      console.error("FAILURE LOGGING ERROR:", loggingError);
+  
+    }
+  
+    console.error("SERVER ERROR:", error);
+  
     res.writeHead(500, {
       "Content-Type": "application/json",
     });
-
+  
     res.end(
       JSON.stringify({
         error: "server_error",
