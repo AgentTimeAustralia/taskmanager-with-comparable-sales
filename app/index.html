@@ -468,8 +468,12 @@
         const progress = recordData.Progress || 0;
 
         const circle = document.getElementById("progressValue");
-        const phase = recordData.Phase || "-";
-        document.getElementById("phaseValue").innerText = phase;
+        const currentPhase =
+          recordData.Acquisition_Type === "House & Land"
+            ? recordData.Acquisition_Phase
+            : recordData.Phase;
+
+        document.getElementById("phaseValue").innerText = currentPhase || "-";
         circle.innerText = progress + "%";
         circle.style.setProperty("--progress", progress + "%");
       }
@@ -485,13 +489,28 @@
         }
 
         // Phase order (must match your system)
-        const phases = [
-          "Property Brief",
-          "Location Selection",
-          "Sourcing",
-          "Due Diligence",
-          "Settlement & Handover",
-        ];
+        const phases =
+          recordData.Acquisition_Type === "House & Land"
+            ? [
+                "Property Brief",
+                "Location Selection",
+                "Sourcing",
+                "Due Diligence",
+                "Settlement & Handover",
+                "Build Kickoff",
+                "Slab Poured",
+                "Frame Complete",
+                "Roof / External Wall Complete",
+                "Lockup Stage Complete",
+                "Complete Handover",
+              ]
+            : [
+                "Property Brief",
+                "Location Selection",
+                "Sourcing",
+                "Due Diligence",
+                "Settlement & Handover",
+              ];
 
         let grouped = {};
         phases.forEach((p) => (grouped[p] = []));
@@ -541,7 +560,10 @@
         // STEP 2: Render accordion
         let html = "";
 
-        const activePhase = recordData.Phase || "";
+        const activePhase =
+          recordData.Acquisition_Type === "House & Land"
+            ? recordData.Acquisition_Phase || ""
+            : recordData.Phase || "";
 
         phases.forEach((phase, i) => {
           let extractedPhase = "";
@@ -764,7 +786,12 @@
             if (result.code === "SUCCESS" || result.status === "success") {
               showToast("Tasks updated successfully. Refresh Page.");
               setTimeout(() => {
-                localStorage.setItem("openPhase", recordData.Phase || "");
+                const currentPhase =
+                  recordData.Acquisition_Type === "House & Land"
+                    ? recordData.Acquisition_Phase
+                    : recordData.Phase;
+
+                localStorage.setItem("openPhase", currentPhase || "");
                 location.reload();
               }, 800);
             } else {
