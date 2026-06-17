@@ -13,6 +13,9 @@ module.exports = async (req, res) => {
   const datastore = catalystApp.datastore();
 
   const usageTable = datastore.table("WidgetUsageLogs");
+  const creditsTable = datastore.table("CreditsBalance");
+  const htagConsumptionTable = datastore.table("HTAGConsumptionLogs");
+  const zcql = catalystApp.zcql();
 
   // =============================================
   // CORS
@@ -27,22 +30,22 @@ module.exports = async (req, res) => {
 
   if (req.method === "OPTIONS") {
     res.writeHead(200);
-  
+
     res.end();
-  
+
     return;
   }
-  
+
   let startTime;
-  
+
   let usageBreakdown = [];
-  
+
   let totalBillingUnits = 0;
-  
+
   let totalBillingCost = 0;
-  
+
   let currentBillingBalance = null;
-  
+
   try {
     // =============================================
     // AUTHENTICATION CHECK
@@ -66,6 +69,24 @@ module.exports = async (req, res) => {
 
       return;
     }
+
+    // =============================================
+    // ORG DETAILS
+    // =============================================
+
+    const orgId = req.headers["x-org-id"];
+    console.log("ORG ID HEADER:", orgId);
+
+    const crmUser = req.headers["x-crm-user"] || "Unknown User";
+    // =============================================
+    // FETCH CREDIT BALANCE
+    // =============================================
+
+    const creditResult = await zcql.executeZCQLQuery(
+      `SELECT * FROM CreditsBalance WHERE OrgID='${orgId}'`
+    );
+
+    console.log("CREDIT RESULT:", JSON.stringify(creditResult, null, 2));
 
     // =============================================
     // EXECUTION TIMER + BILLING TRACKING
@@ -283,27 +304,117 @@ module.exports = async (req, res) => {
       soldResponse.headers.get("x-billing-balance") || currentBillingBalance;
 
     // ============================================
+    // UPDATE CREDIT BALANCE
+    // ============================================
+
+    try {
+      const creditRow = creditResult[0].CreditsBalance;
+
+      const currentCredits = Number(creditRow.CreditsRemaining || 0);
+
+      if (currentCredits <= 0) {
+        res.writeHead(402, {
+          "Content-Type": "application/json",
+        });
+
+        res.end(
+          JSON.stringify({
+            error: "insufficient_credits",
+            message:
+              "Oops! You have insufficient credits. Please visit our website to top-up.",
+          })
+        );
+
+        return;
+      }
+
+      const newBalance = Math.max(0, currentCredits - totalBillingUnits);
+
+      console.log(
+        "CREDIT DEDUCTION:",
+        currentCredits,
+        "-",
+        totalBillingUnits,
+        "=",
+        newBalance
+      );
+
+      await creditsTable.updateRow({
+        ROWID: creditRow.ROWID,
+        CreditsRemaining: newBalance,
+      });
+    } catch (creditUpdateError) {
+      console.error("CREDIT UPDATE ERROR:", creditUpdateError);
+    }
+
+    // ============================================
+    // HTAG CONSUMPTION LOG
+    // ============================================
+
+    try {
+
+      console.log(
+        "ENTERING HTAG CONSUMPTION LOG BLOCK"
+      );
+    
+      const insertedRow =
+        await htagConsumptionTable.insertRow({
+    
+          ModuleName: "Acquisition",
+    
+          WidgetName: "Comparable Sales",
+    
+          OrgID: orgId,
+    
+          APIUnitsConsumed: totalBillingUnits,
+    
+          APICost: totalBillingCost,
+    
+          FunctionName: "getComparableSales",
+    
+          ExecutionDateTime: new Date(),
+    
+          RecordID:
+            req.headers["x-record-id"] || ""
+    
+        });
+    
+      console.log(
+        "HTAG INSERT RESULT:",
+        JSON.stringify(insertedRow, null, 2)
+      );
+    
+    } catch (htagLogError) {
+    
+      console.error(
+        "HTAG CONSUMPTION LOG ERROR:",
+        JSON.stringify(htagLogError, null, 2)
+      );
+    
+    }
+
+    // ============================================
     // Inserting Log To Data Storage
     // ============================================
 
     try {
       await usageTable.insertRow({
         Org_ID: req.headers["x-org-id"] || "Unknown Org",
-    
+
         CRM_User: req.headers["x-crm-user"] || "Unknown User",
-    
+
         Function_Name: "getComparableSales",
-    
+
         Feature_Name: "Comparable Sales",
-    
+
         Record_ID: req.headers["x-record-id"] || "Unknown Record",
-    
+
         Execution_Time_MS: Date.now() - startTime,
-    
+
         Status: soldResponse.ok ? "success" : "error",
-    
+
         API_Consumption: totalBillingUnits,
-    
+
         Usage_Response: usageBreakdown.join("\n"),
       });
     } catch (loggingError) {
@@ -393,45 +504,39 @@ module.exports = async (req, res) => {
       })
     );
   } catch (error) {
-
     try {
-  
       await usageTable.insertRow({
-  
         Org_ID: req.headers["x-org-id"] || "Unknown Org",
-  
+
         CRM_User: req.headers["x-crm-user"] || "Unknown User",
-  
+
         Function_Name: "getComparableSales",
-  
+
         Feature_Name: "Comparable Sales",
-  
+
         Record_ID: req.headers["x-record-id"] || "Unknown Record",
-  
+
         Execution_Time_MS: Date.now() - startTime,
-  
+
         Status: "failed",
-  
+
         API_Consumption: totalBillingUnits || 0,
-  
+
         Usage_Response:
           (usageBreakdown || []).join("\n") +
           "\nERROR: " +
           (error.message || "Unknown Error"),
       });
-  
     } catch (loggingError) {
-  
       console.error("FAILURE LOGGING ERROR:", loggingError);
-  
     }
-  
+
     console.error("SERVER ERROR:", error);
-  
+
     res.writeHead(500, {
       "Content-Type": "application/json",
     });
-  
+
     res.end(
       JSON.stringify({
         error: "server_error",
