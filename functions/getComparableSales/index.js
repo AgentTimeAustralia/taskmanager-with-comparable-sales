@@ -79,8 +79,8 @@ module.exports = async (req, res) => {
     // =============================================
     // ORG DETAILS
     // =============================================
-
-    const orgId = req.headers["x-org-id"];
+// removing white space from org id id exist.
+    const orgId = String(req.headers["x-org-id"] || "").trim();
     console.log("ORG ID HEADER:", orgId);
 
     // const crmUser = req.headers["x-crm-user"] || "Unknown User";
