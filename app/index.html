@@ -167,35 +167,35 @@
       }
 
       .phase-header {
-    padding: 14px 16px;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    background: white;
-    border-radius: 12px;
-}
+        padding: 14px 16px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        background: white;
+        border-radius: 12px;
+      }
 
-.phase-header-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+      .phase-header-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
 
-.phase-complete-btn {
-    background: #43b548;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 12px;
-    cursor: pointer;
-}
+      .phase-complete-btn {
+        background: #43b548;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        cursor: pointer;
+      }
 
-.phase-complete-btn:hover {
-    opacity: 0.9;
-}
+      .phase-complete-btn:hover {
+        opacity: 0.9;
+      }
 
       .phase-content {
         padding: 10px 10px 0 10px;
@@ -505,8 +505,8 @@
         const container = document.getElementById("taskContainer");
         const tasks = recordData.Tasklists;
         console.log("Acquisition Type:", recordData.Acquisition_Type);
-console.log("Phase:", recordData.Phase);
-console.log("Acquisition Phase:", recordData.Acquisition_Phase);
+        console.log("Phase:", recordData.Phase);
+        console.log("Acquisition Phase:", recordData.Acquisition_Phase);
         console.log("TASKLIST RAW:", tasks);
         if (!tasks || tasks.length === 0) {
           container.innerHTML = "No tasks found";
@@ -593,13 +593,12 @@ console.log("Acquisition Phase:", recordData.Acquisition_Phase);
         phases.forEach((phase, i) => {
           const phaseTasks = grouped[phase];
 
-const incompleteTasks = phaseTasks.filter(
-  (t) => t.Status !== "Completed"
-);
+          const incompleteTasks = phaseTasks.filter(
+            (t) => t.Status !== "Completed"
+          );
 
-const showPhaseButton =
-  phaseTasks.length > 0 &&
-  incompleteTasks.length > 0;
+          const showPhaseButton =
+            phaseTasks.length > 0 && incompleteTasks.length > 0;
           let extractedPhase = "";
 
           if (activePhase && activePhase.includes(":")) {
@@ -767,7 +766,6 @@ const showPhaseButton =
       function updateStatus(index, value) {
         recordData.Tasklists[index].Status = value;
       }
-
 
       function markComplete(index) {
         recordData.Tasklists[index].Status = "Completed";
@@ -1018,8 +1016,7 @@ const showPhaseButton =
       }
 
       function openPhaseCompleteModal(phaseName) {
-
-const html = `
+        const html = `
 <div class="modal-overlay">
 
     <div class="modal-box" style="width:350px;">
@@ -1064,61 +1061,47 @@ const html = `
 </div>
 `;
 
-document.body.insertAdjacentHTML("beforeend", html);
-}
+        document.body.insertAdjacentHTML("beforeend", html);
+      }
 
-function closePhaseCompleteModal() {
+      function closePhaseCompleteModal() {
+        const modal = document.querySelector(".modal-overlay");
 
-const modal = document.querySelector(".modal-overlay");
-
-if (modal) {
-    modal.remove();
-}
-}
-
-function confirmPhaseCompletion(phaseName) {
-
-closePhaseCompleteModal();
-
-const tasks = recordData.Tasklists;
-
-let currentPhase = "";
-
-tasks.forEach((row) => {
-
-    const name = row.Task_Name || "";
-
-    if (name.includes("▶")) {
-
-        currentPhase = name
-            .replace(/▶+/g, "")
-            .trim()
-            .toLowerCase();
-
-        return;
-    }
-
-    if (currentPhase === phaseName.toLowerCase()) {
-
-        if (
-            row.Status !== "Completed"
-        ) {
-            row.Status = "Completed";
+        if (modal) {
+          modal.remove();
         }
+      }
 
-    }
+      function confirmPhaseCompletion(phaseName) {
+        closePhaseCompleteModal();
 
-});
+        const tasks = recordData.Tasklists;
 
-renderTasks();
+        let currentPhase = "";
 
-showToast(
-    phaseName + " tasks marked as completed."
-);
+        tasks.forEach((row) => {
+          const name = row.Task_Name || "";
 
-// Optional auto-save
-saveTasks();
-}
+          if (name.includes("▶")) {
+            currentPhase = name.replace(/▶+/g, "").trim().toLowerCase();
+
+            return;
+          }
+
+          if (currentPhase === phaseName.toLowerCase()) {
+            if (row.Status !== "Completed") {
+              row.Status = "Completed";
+            }
+          }
+        });
+
+        renderTasks();
+
+        showToast(phaseName + " tasks marked as completed.");
+
+        // Optional auto-save
+        saveTasks();
+      }
 
       // =============================================
       // COMPARABLE SALES POPUP
@@ -1149,17 +1132,65 @@ saveTasks();
 
         <div id="comparableSalesContent">
 
-            <div style="padding:20px; text-align:center; color:#777;">
-                Fetching comparable sales...
-            </div>
+    <div style="
+        padding:20px;
+        border:1px solid #eee;
+        border-radius:10px;
+        background:#fafafa;
+    ">
 
-        </div>
+        <label style="
+            display:block;
+            margin-bottom:8px;
+            font-weight:600;
+        ">
+            Select Result Limit
+        </label>
+
+        <select
+            id="comparableLimit"
+            style="
+                width:100%;
+                padding:10px;
+                margin-bottom:15px;
+            "
+        >
+        <option value="1">1 Results</option>
+            <option value="5" selected>5 Results</option>
+            <option value="10">10 Results</option>
+            <option value="15">15 Results</option>
+            <option value="20">20 Results</option>
+            <option value="25">25 Results</option>
+        </select>
+
+        <button id="startComparableSearch">
+            Search Comparable Sales
+        </button>
+
+    </div>
+
+</div>
 
     </div>
 </div>
 `;
 
         document.body.insertAdjacentHTML("beforeend", html);
+        const selectedLimit = await new Promise((resolve) => {
+          document
+            .getElementById("startComparableSearch")
+            .addEventListener("click", () => {
+              const limit = document.getElementById("comparableLimit").value;
+
+              document.getElementById("comparableSalesContent").innerHTML = `
+        <div style="padding:20px; text-align:center; color:#777;">
+          Fetching comparable sales...
+        </div>
+      `;
+
+              resolve(limit);
+            });
+        });
 
         try {
           // ---------------------------------------------
@@ -1355,7 +1386,9 @@ saveTasks();
               "?address=" +
               encodeURIComponent(acquisitionAddress) +
               "&address_key=" +
-              encodeURIComponent(addressKey),
+              encodeURIComponent(addressKey) +
+              "&limit=" +
+              selectedLimit,
 
             {
               method: "GET",
@@ -1413,8 +1446,17 @@ saveTasks();
           }
 
           console.log("FINAL SOLD DATA:", soldData);
+          console.log("LAST TOPUP DATE:", soldData.credit_data.last_topup_date);
 
-          console.log("FINAL SOLD DATA:", soldData);
+          try {
+            if (soldData.credit_data) {
+              // alert(JSON.stringify(soldData.credit_data, null, 2));
+
+              await updateHTagSenderRecord(soldData.credit_data);
+            }
+          } catch (err) {
+            console.error("HTAG CREDIT UPDATE FAILED", err);
+          }
 
           // =============================================
           // HANDLE API ERRORS
@@ -1683,6 +1725,78 @@ ${p.bedrooms}b | ${p.bathrooms}ba</td>
             "Failed to save comparable sales notes. please contact support@agenttime.au.",
             true
           );
+        }
+      }
+
+      async function updateHTagSenderRecord(creditData) {
+        try {
+          const senderSearch = await ZOHO.CRM.API.searchRecord({
+            Entity: "Sender_IDs",
+            Type: "criteria",
+            Query: "(Sender_Type:equals:HTag)",
+          });
+
+          if (!senderSearch.data || senderSearch.data.length === 0) {
+            console.log("HTag Sender_ID not found");
+            return;
+          }
+
+          const senderId = senderSearch.data[0].id;
+
+          const zohoDateTime =
+            new Date().toISOString().split(".")[0] + "+00:00";
+
+          console.log("DATETIME:", zohoDateTime);
+
+          const lastTopUpDate = creditData.last_topup_date
+            ? new Date(creditData.last_topup_date.replace(" ", "T"))
+                .toISOString()
+                .split(".")[0] + "+00:00"
+            : null;
+
+          const config = {
+            Entity: "Sender_IDs",
+            APIData: {
+              id: senderId,
+
+              Last_Credit_Usage_Date: zohoDateTime,
+
+              Available_Credits: creditData.available_credits,
+
+              Last_Credits_Consumed: creditData.last_credits_consumed,
+
+              Credit_Status: creditData.credit_status,
+
+              Last_Top_Up: creditData.last_topup,
+
+              Last_Top_Up_Date: lastTopUpDate,
+
+              Total_Credits_Purchased: creditData.total_credits_purchased,
+            },
+          };
+
+          console.log(
+            "TOTAL_CREDITS_PURCHASED SENT:",
+            creditData.total_credits_purchased
+          );
+
+          console.log("SENDER UPDATE CONFIG:", config);
+
+          const updateResponse = await ZOHO.CRM.API.updateRecord(config);
+
+          console.log("SENDER UPDATE RESPONSE:", updateResponse);
+
+          const verify = await ZOHO.CRM.API.getRecord({
+            Entity: "Sender_IDs",
+            RecordID: senderId,
+          });
+        } catch (error) {
+          console.error(
+            "SENDER UPDATE ERROR FULL:",
+            JSON.stringify(error, null, 2)
+          );
+
+          console.error("SENDER UPDATE ERROR RAW:", error);
         }
       }
 

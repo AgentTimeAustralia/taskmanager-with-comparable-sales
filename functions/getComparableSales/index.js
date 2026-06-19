@@ -46,6 +46,12 @@ module.exports = async (req, res) => {
 
   let currentBillingBalance = null;
 
+  let creditRow = null;
+
+  let tenantRow = null;
+
+  let newBalance = 0;
+
   try {
     // =============================================
     // AUTHENTICATION CHECK
@@ -77,7 +83,7 @@ module.exports = async (req, res) => {
     const orgId = req.headers["x-org-id"];
     console.log("ORG ID HEADER:", orgId);
 
-    const crmUser = req.headers["x-crm-user"] || "Unknown User";
+    // const crmUser = req.headers["x-crm-user"] || "Unknown User";
     // =============================================
     // FETCH CREDIT BALANCE
     // =============================================
@@ -87,6 +93,129 @@ module.exports = async (req, res) => {
     );
 
     console.log("CREDIT RESULT:", JSON.stringify(creditResult, null, 2));
+
+    const apiTenantResult = await zcql.executeZCQLQuery(
+      `SELECT * FROM apiTenants WHERE Org_ID='${orgId}'`
+    );
+
+    const paymentHistoryResult = await zcql.executeZCQLQuery(
+      `SELECT * FROM PaymentHistory
+       WHERE OrgID='${orgId}'
+       ORDER BY LastTopupDate DESC`
+    );
+
+    let lastTopupDate = "";
+let lastTopup = 0;
+let totalCreditsPurchased = 0;
+let latestPayment = null;
+
+if (paymentHistoryResult && paymentHistoryResult.length > 0) {
+
+  paymentHistoryResult.forEach((row) => {
+
+    totalCreditsPurchased += Number(
+      row.PaymentHistory.CreditToppedUp || 0
+    );
+
+    if (
+      !latestPayment ||
+      new Date(row.PaymentHistory.LastTopupDate) >
+      new Date(latestPayment.LastTopupDate)
+    ) {
+      latestPayment = row.PaymentHistory;
+    }
+  });
+
+  if (latestPayment) {
+    lastTopupDate = latestPayment.LastTopupDate || "";
+    lastTopup = Number(latestPayment.CreditToppedUp || 0);
+  }
+}
+
+    console.log("LAST TOPUP:", lastTopup);
+    console.log("LAST TOPUP DATE:", lastTopupDate);
+    console.log("TOTAL PURCHASED:", totalCreditsPurchased);
+
+    console.log(
+      "PAYMENT HISTORY RESULT:",
+      JSON.stringify(paymentHistoryResult, null, 2)
+    );
+
+    console.log("API TENANT RESULT:", JSON.stringify(apiTenantResult, null, 2));
+
+    let latestPaymentGlobal = latestPayment;
+
+    // =============================================
+    // PAYMENT HISTORY TOPUP SYNC
+    // =============================================
+
+    if (
+      apiTenantResult &&
+      apiTenantResult.length > 0 &&
+      paymentHistoryResult &&
+      paymentHistoryResult.length > 0
+    ) {
+      tenantRow = apiTenantResult[0].apiTenants;
+
+      const latestPayment = latestPaymentGlobal;
+
+      console.log(
+        "LATEST PAYMENT ROW:",
+        JSON.stringify(latestPayment, null, 2)
+      );
+
+      console.log("PAYMENT CREDIT:", latestPayment.CreditToppedUp);
+
+      console.log("PAYMENT DATE:", latestPayment.LastTopupDate);
+
+      console.log("TENANT LAST TOPUP:", tenantRow.LastTopUpDate);
+
+      console.log("TENANT CURRENT CREDITS:", tenantRow.CreditsLeft);
+
+      const tenantLastTopup = tenantRow.LastTopUpDate
+        ? new Date(tenantRow.LastTopUpDate)
+        : null;
+
+        const paymentLastTopup = latestPayment.LastTopupDate
+        ? new Date(latestPayment.LastTopupDate)
+        : null;
+
+      if (
+        paymentLastTopup &&
+        (!tenantLastTopup || paymentLastTopup > tenantLastTopup)
+      ) {
+        console.log("NEW TOPUP DETECTED");
+
+        const topupCredits = Number(latestPayment.CreditToppedUp || 0);
+
+        const currentCredits = Number(tenantRow.CreditsLeft || 0);
+
+        const newCredits = currentCredits + topupCredits;
+
+        console.log("UPDATING APITENANTS =>", {
+          creditsBefore: currentCredits,
+          topupCredits,
+          creditsAfter: newCredits,
+          lastTopUpDate: latestPayment.LastTopupDate,
+        });
+
+        await zcql.executeZCQLQuery(`
+          UPDATE apiTenants
+          SET CreditsLeft=${newCredits},
+              CreditStatus='Active',
+              LastTopUpDate='${latestPayment.LastTopupDate}'
+          WHERE ROWID='${tenantRow.ROWID}'
+          `);
+          
+          const refreshedTenant = await zcql.executeZCQLQuery(
+            `SELECT * FROM apiTenants WHERE ROWID='${tenantRow.ROWID}'`
+          );
+          
+          tenantRow = refreshedTenant[0].apiTenants;
+
+        console.log("TOPUP APPLIED:", topupCredits, "NEW BALANCE:", newCredits);
+      }
+    }
 
     // =============================================
     // EXECUTION TIMER + BILLING TRACKING
@@ -100,7 +229,9 @@ module.exports = async (req, res) => {
 
     const url = new URL(req.url, "http://localhost");
     const address = url.searchParams.get("address");
-    const existingAddressKey = url.searchParams.get("address_key");
+const existingAddressKey = url.searchParams.get("address_key");
+const limit = Number(url.searchParams.get("limit")) || 5;
+    
 
     if (!address) {
       res.writeHead(400, {
@@ -260,12 +391,12 @@ module.exports = async (req, res) => {
     // STEP 2 - SOLD SEARCH USING ADDRESS KEY
     // ============================================
 
-    const soldSearchUrl =
-      `https://api.htagai.com/v1/property/sold/search?` +
-      `address_key=${encodeURIComponent(addressKey)}` +
-      `&radius_km=2` +
-      `&proximity=any` +
-      `&limit=5`;
+const soldSearchUrl =
+  `https://api.htagai.com/v1/property/sold/search?` +
+  `address_key=${encodeURIComponent(addressKey)}` +
+  `&radius_km=2` +
+  `&proximity=any` +
+  `&limit=${limit}`;
 
     console.log("HTAG SOLD SEARCH URL:", soldSearchUrl);
 
@@ -308,9 +439,40 @@ module.exports = async (req, res) => {
     // ============================================
 
     try {
-      const creditRow = creditResult[0].CreditsBalance;
+      if (!creditResult || creditResult.length === 0) {
+        throw new Error("No CreditsBalance record found for Org ID: " + orgId);
+      }
 
-      const currentCredits = Number(creditRow.CreditsRemaining || 0);
+      if (!apiTenantResult || apiTenantResult.length === 0) {
+        throw new Error("No apiTenants record found for Org ID: " + orgId);
+      }
+
+      creditRow = creditResult[0].CreditsBalance;
+
+if (!tenantRow) {
+  tenantRow = apiTenantResult[0].apiTenants;
+}
+
+if (!tenantRow) {
+  throw new Error("No apiTenants record found for Org ID: " + orgId);
+}
+
+      let currentCredits = Number(tenantRow.CreditsLeft || 0);
+
+      if (
+        Number(creditRow.CreditsRemaining || 0) === 0 &&
+        Number(tenantRow.CreditsLeft || 0) > 0
+      ) {
+        await creditsTable.updateRow({
+          ROWID: creditRow.ROWID,
+          CreditsRemaining: tenantRow.CreditsLeft,
+          Total_Credits_Purchased: totalCreditsPurchased,
+        });
+      
+        creditRow.CreditsRemaining = tenantRow.CreditsLeft;
+        currentCredits = Number(tenantRow.CreditsLeft);
+      }
+      console.log("CURRENT CREDITS BEFORE CHECK:", currentCredits);
 
       if (currentCredits <= 0) {
         res.writeHead(402, {
@@ -328,7 +490,7 @@ module.exports = async (req, res) => {
         return;
       }
 
-      const newBalance = Math.max(0, currentCredits - totalBillingUnits);
+      newBalance = Math.max(0, currentCredits - totalBillingUnits);
 
       console.log(
         "CREDIT DEDUCTION:",
@@ -339,58 +501,89 @@ module.exports = async (req, res) => {
         newBalance
       );
 
-      await creditsTable.updateRow({
-        ROWID: creditRow.ROWID,
+      console.log("FINAL TOTAL PURCHASED:", totalCreditsPurchased);
+
+await creditsTable.updateRow({
+  ROWID: creditRow.ROWID,
+  CreditsRemaining: newBalance,
+  Total_Credits_Purchased: totalCreditsPurchased,
+  Last_Credits_Consumed: totalBillingUnits,
+  LastCreditUsageDate: new Date().toISOString().split("T")[0],
+});
+
+      console.log("UPDATING CREDITS BALANCE =>", {
         CreditsRemaining: newBalance,
+        TotalCreditsPurchased: totalCreditsPurchased,
+        LastCreditsConsumed: totalBillingUnits,
       });
     } catch (creditUpdateError) {
       console.error("CREDIT UPDATE ERROR:", creditUpdateError);
     }
+
+    let tenantCreditStatus = "Unknown";
+
+    try {
+      if (tenantRow) {
+        if (newBalance <= 0) {
+          tenantCreditStatus = "Exhausted";
+        } else if (newBalance <= 20) {
+          tenantCreditStatus = "Low Credits";
+        } else {
+          tenantCreditStatus = "Active";
+        }
+      }
+
+      if (tenantRow && tenantRow.ROWID) {
+        await zcql.executeZCQLQuery(
+          `UPDATE apiTenants
+           SET CreditsLeft=${newBalance},
+               CreditStatus='${tenantCreditStatus}'
+           WHERE ROWID='${tenantRow.ROWID}'`
+        );
+      }
+
+      console.log("API TENANT UPDATED:", newBalance, tenantCreditStatus);
+    } catch (tenantUpdateError) {
+      console.error("API TENANT UPDATE ERROR:", tenantUpdateError);
+    }
+
+    console.log("API TENANT CREDITS UPDATED:", newBalance);
 
     // ============================================
     // HTAG CONSUMPTION LOG
     // ============================================
 
     try {
+      console.log("ENTERING HTAG CONSUMPTION LOG BLOCK");
 
-      console.log(
-        "ENTERING HTAG CONSUMPTION LOG BLOCK"
-      );
-    
-      const insertedRow =
-        await htagConsumptionTable.insertRow({
-    
-          ModuleName: "Acquisition",
-    
-          WidgetName: "Comparable Sales",
-    
-          OrgID: orgId,
-    
-          APIUnitsConsumed: totalBillingUnits,
-    
-          APICost: totalBillingCost,
-    
-          FunctionName: "getComparableSales",
-    
-          ExecutionDateTime: new Date(),
-    
-          RecordID:
-            req.headers["x-record-id"] || ""
-    
-        });
-    
-      console.log(
-        "HTAG INSERT RESULT:",
-        JSON.stringify(insertedRow, null, 2)
-      );
-    
+      const insertedRow = await htagConsumptionTable.insertRow({
+        ModuleName: "Acquisition",
+
+        WidgetName: "Comparable Sales",
+
+        OrgID: orgId,
+
+        APIUnitsConsumed: totalBillingUnits,
+
+        APICost: totalBillingCost,
+
+        FunctionName: "getComparableSales",
+
+        ExecutionDateTime: new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " "),
+
+        RecordID: req.headers["x-record-id"] || "",
+        CreditCostBreakdown: usageBreakdown.join("\n"),
+      });
+
+      console.log("HTAG INSERT RESULT:", JSON.stringify(insertedRow, null, 2));
     } catch (htagLogError) {
-    
       console.error(
         "HTAG CONSUMPTION LOG ERROR:",
         JSON.stringify(htagLogError, null, 2)
       );
-    
     }
 
     // ============================================
@@ -479,6 +672,14 @@ module.exports = async (req, res) => {
     res.end(
       JSON.stringify({
         success: true,
+        credit_data: {
+          available_credits: newBalance,
+          last_credits_consumed: totalBillingUnits,
+          credit_status: tenantCreditStatus,
+          last_topup: lastTopup,
+          last_topup_date: lastTopupDate,
+          total_credits_purchased: totalCreditsPurchased,
+        },
         input_address: address,
         address_key: addressKey,
         total_results: soldData.total || 0,
@@ -487,7 +688,7 @@ module.exports = async (req, res) => {
 
           suburb: item.suburb || "",
 
-          sold_price: item.sold_price || 0,
+          sold_price: item.sold_price || "N/A",
 
           sold_date: item.sold_date || "",
 
