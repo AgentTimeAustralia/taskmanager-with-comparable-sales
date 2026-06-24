@@ -1,3 +1,5 @@
+//Comparable Sales Button Widget
+
 "use strict";
 
 require("dotenv").config();
@@ -59,7 +61,7 @@ module.exports = async (req, res) => {
 
     const currentUser = await catalystApp.userManagement().getCurrentUser();
 
-    console.log("AUTHENTICATED USER:", currentUser);
+    // console.log("AUTHENTICATED USER:", currentUser);
 
     if (!currentUser || !currentUser.user_id) {
       res.writeHead(401, {
@@ -79,9 +81,9 @@ module.exports = async (req, res) => {
     // =============================================
     // ORG DETAILS
     // =============================================
-// removing white space from org id id exist.
+    // removing white space from org id id exist.
     const orgId = String(req.headers["x-org-id"] || "").trim();
-    console.log("ORG ID HEADER:", orgId);
+    // console.log("ORG ID HEADER:", orgId);
 
     // const crmUser = req.headers["x-crm-user"] || "Unknown User";
     // =============================================
@@ -92,7 +94,7 @@ module.exports = async (req, res) => {
       `SELECT * FROM CreditsBalance WHERE OrgID='${orgId}'`
     );
 
-    console.log("CREDIT RESULT:", JSON.stringify(creditResult, null, 2));
+    // console.log("CREDIT RESULT:", JSON.stringify(creditResult, null, 2));
 
     const apiTenantResult = await zcql.executeZCQLQuery(
       `SELECT * FROM apiTenants WHERE Org_ID='${orgId}'`
@@ -128,16 +130,20 @@ module.exports = async (req, res) => {
       }
     }
 
-    console.log("LAST TOPUP:", lastTopup);
-    console.log("LAST TOPUP DATE:", lastTopupDate);
-    console.log("TOTAL PURCHASED:", totalCreditsPurchased);
+    // console.log("LAST TOPUP:", lastTopup);
+    // console.log("LAST TOPUP DATE:", lastTopupDate);
+    // console.log("TOTAL PURCHASED:", totalCreditsPurchased);
 
-    console.log(
-      "PAYMENT HISTORY RESULT:",
-      JSON.stringify(paymentHistoryResult, null, 2)
-    );
+    // console.log(
+    //   "PAYMENT HISTORY RESULT:",
+    //   JSON.stringify(paymentHistoryResult, null, 2)
+    // );
 
-    console.log("API TENANT RESULT:", JSON.stringify(apiTenantResult, null, 2));
+    // console.log("API TENANT RESULT:", JSON.stringify(apiTenantResult, null, 2));
+
+    if (apiTenantResult && apiTenantResult.length > 0) {
+      tenantRow = apiTenantResult[0].apiTenants;
+    }
 
     let latestPaymentGlobal = latestPayment;
 
@@ -155,18 +161,18 @@ module.exports = async (req, res) => {
 
       const latestPayment = latestPaymentGlobal;
 
-      console.log(
-        "LATEST PAYMENT ROW:",
-        JSON.stringify(latestPayment, null, 2)
-      );
+      // console.log(
+      //   "LATEST PAYMENT ROW:",
+      //   JSON.stringify(latestPayment, null, 2)
+      // );
 
-      console.log("PAYMENT CREDIT:", latestPayment.CreditToppedUp);
+      // console.log("PAYMENT CREDIT:", latestPayment.CreditToppedUp);
 
-      console.log("PAYMENT DATE:", latestPayment.LastTopupDate);
+      // console.log("PAYMENT DATE:", latestPayment.LastTopupDate);
 
-      console.log("TENANT LAST TOPUP:", tenantRow.LastTopUpDate);
+      // console.log("TENANT LAST TOPUP:", tenantRow.LastTopUpDate);
 
-      console.log("TENANT CURRENT CREDITS:", tenantRow.CreditsLeft);
+      // console.log("TENANT CURRENT CREDITS:", tenantRow.CreditsLeft);
 
       const tenantLastTopup = tenantRow.LastTopUpDate
         ? new Date(tenantRow.LastTopUpDate)
@@ -180,7 +186,7 @@ module.exports = async (req, res) => {
         paymentLastTopup &&
         (!tenantLastTopup || paymentLastTopup > tenantLastTopup)
       ) {
-        console.log("NEW TOPUP DETECTED");
+        // console.log("NEW TOPUP DETECTED");
 
         const topupCredits = Number(latestPayment.CreditToppedUp || 0);
 
@@ -188,12 +194,12 @@ module.exports = async (req, res) => {
 
         const newCredits = currentCredits + topupCredits;
 
-        console.log("UPDATING APITENANTS =>", {
-          creditsBefore: currentCredits,
-          topupCredits,
-          creditsAfter: newCredits,
-          lastTopUpDate: latestPayment.LastTopupDate,
-        });
+        // console.log("UPDATING APITENANTS =>", {
+        //   creditsBefore: currentCredits,
+        //   topupCredits,
+        //   creditsAfter: newCredits,
+        //   lastTopUpDate: latestPayment.LastTopupDate,
+        // });
 
         await zcql.executeZCQLQuery(`
           UPDATE apiTenants
@@ -209,8 +215,60 @@ module.exports = async (req, res) => {
 
         tenantRow = refreshedTenant[0].apiTenants;
 
-        console.log("TOPUP APPLIED:", topupCredits, "NEW BALANCE:", newCredits);
+        // console.log("TOPUP APPLIED:", topupCredits, "NEW BALANCE:", newCredits);
       }
+    }
+
+    if (!tenantRow) {
+      throw new Error("No apiTenants record found for Org ID: " + orgId);
+    }
+
+    let currentCredits = Number(tenantRow.CreditsLeft || 0);
+
+    const MIN_REQUIRED_CREDITS = 20;
+
+    if (currentCredits < MIN_REQUIRED_CREDITS) {
+      try {
+        await usageTable.insertRow({
+          Org_ID: orgId,
+
+          CRM_User: req.headers["x-crm-user"] || "Unknown User",
+
+          Function_Name: "getComparableSales",
+
+          Feature_Name: "Comparable Sales",
+
+          Record_ID: req.headers["x-record-id"] || "Unknown Record",
+
+          Execution_Time_MS: 0,
+
+          Status: "insufficient_credits",
+
+          API_Consumption: 0,
+
+          Usage_Response: `Available Credits=${currentCredits}, Required Credits=${MIN_REQUIRED_CREDITS}`,
+        });
+      } catch (logError) {
+        console.error("INSUFFICIENT CREDIT LOG ERROR", logError);
+      }
+
+      res.writeHead(402, {
+        "Content-Type": "application/json",
+      });
+
+      res.end(
+        JSON.stringify({
+          error: "insufficient_credits",
+
+          message: `Minimum ${MIN_REQUIRED_CREDITS} credits required to run Comparable Sales.`,
+
+          available_credits: currentCredits,
+
+          required_credits: MIN_REQUIRED_CREDITS,
+        })
+      );
+
+      return;
     }
 
     // =============================================
@@ -270,14 +328,14 @@ module.exports = async (req, res) => {
 
     let addressKey = existingAddressKey || "";
 
-    console.log("EXISTING ADDRESS KEY:", addressKey);
+    // console.log("EXISTING ADDRESS KEY:", addressKey);
 
     // ============================================
     // FALLBACK TO STANDARDISATION
     // ============================================
 
     if (!addressKey) {
-      console.log("NO ADDRESS KEY FOUND. STANDARDISING:", address);
+      // console.log("NO ADDRESS KEY FOUND. STANDARDISING:", address);
 
       const standardiseResponse = await fetch(
         "https://api.htagai.com/v1/address/standardise",
@@ -323,10 +381,10 @@ module.exports = async (req, res) => {
         standardiseResponse.headers.get("x-billing-balance") ||
         currentBillingBalance;
 
-      console.log(
-        "HTAG STANDARDISE RESPONSE:",
-        JSON.stringify(standardiseData, null, 2)
-      );
+      // console.log(
+      //   "HTAG STANDARDISE RESPONSE:",
+      //   JSON.stringify(standardiseData, null, 2)
+      // );
 
       // ============================================
       // HANDLE CREDIT LIMIT
@@ -380,7 +438,7 @@ module.exports = async (req, res) => {
       addressKey = standardiseData.results[0].address_key;
     }
 
-    console.log("FINAL ADDRESS KEY:", addressKey);
+    // console.log("FINAL ADDRESS KEY:", addressKey);
 
     // ============================================
     // STEP 2 - SOLD SEARCH USING ADDRESS KEY
@@ -393,7 +451,7 @@ module.exports = async (req, res) => {
       `&proximity=any` +
       `&limit=${limit}`;
 
-    console.log("HTAG SOLD SEARCH URL:", soldSearchUrl);
+    // console.log("HTAG SOLD SEARCH URL:", soldSearchUrl);
 
     const soldResponse = await fetch(soldSearchUrl, {
       method: "GET",
@@ -404,7 +462,7 @@ module.exports = async (req, res) => {
 
     const requestId = soldResponse.headers.get("x-amzn-requestid") || "";
 
-    console.log("REQUEST ID:", requestId);
+    // console.log("REQUEST ID:", requestId);
 
     const soldData = await soldResponse.json();
 
@@ -439,14 +497,30 @@ module.exports = async (req, res) => {
 
     try {
       if (!creditResult || creditResult.length === 0) {
-        throw new Error("No CreditsBalance record found for Org ID: " + orgId);
+        // console.log(
+        //   "NO CREDITS BALANCE RECORD FOUND. CREATING ONE..."
+        // );
+
+        const newCreditRow = await creditsTable.insertRow({
+          OrgID: orgId,
+
+          CreditsRemaining: Number(tenantRow?.CreditsLeft || 0),
+
+          Total_Credits_Purchased: totalCreditsPurchased,
+
+          Last_Credits_Consumed: 0,
+
+          LastCreditUsageDate: "",
+        });
+
+        creditRow = newCreditRow;
+      } else {
+        creditRow = creditResult[0].CreditsBalance;
       }
 
       if (!apiTenantResult || apiTenantResult.length === 0) {
         throw new Error("No apiTenants record found for Org ID: " + orgId);
       }
-
-      creditRow = creditResult[0].CreditsBalance;
 
       if (!tenantRow) {
         tenantRow = apiTenantResult[0].apiTenants;
@@ -455,8 +529,6 @@ module.exports = async (req, res) => {
       if (!tenantRow) {
         throw new Error("No apiTenants record found for Org ID: " + orgId);
       }
-
-      let currentCredits = Number(tenantRow.CreditsLeft || 0);
 
       if (
         Number(creditRow.CreditsRemaining || 0) === 0 &&
@@ -471,35 +543,20 @@ module.exports = async (req, res) => {
         creditRow.CreditsRemaining = tenantRow.CreditsLeft;
         currentCredits = Number(tenantRow.CreditsLeft);
       }
-      console.log("CURRENT CREDITS BEFORE CHECK:", currentCredits);
-      if (currentCredits <= 0) {
-        res.writeHead(402, {
-          "Content-Type": "application/json",
-        });
-
-        res.end(
-          JSON.stringify({
-            error: "insufficient_credits",
-            message:
-              "Oops! You have insufficient credits. Please visit our website to top-up.",
-          })
-        );
-
-        return;
-      }
+      // console.log("CURRENT CREDITS BEFORE CHECK:", currentCredits);
 
       newBalance = Math.max(0, currentCredits - totalBillingUnits);
 
-      console.log(
-        "CREDIT DEDUCTION:",
-        currentCredits,
-        "-",
-        totalBillingUnits,
-        "=",
-        newBalance
-      );
+      // console.log(
+      //   "CREDIT DEDUCTION:",
+      //   currentCredits,
+      //   "-",
+      //   totalBillingUnits,
+      //   "=",
+      //   newBalance
+      // );
 
-      console.log("FINAL TOTAL PURCHASED:", totalCreditsPurchased);
+      // console.log("FINAL TOTAL PURCHASED:", totalCreditsPurchased);
 
       await creditsTable.updateRow({
         ROWID: creditRow.ROWID,
@@ -509,11 +566,11 @@ module.exports = async (req, res) => {
         LastCreditUsageDate: new Date().toISOString().split("T")[0],
       });
 
-      console.log("UPDATING CREDITS BALANCE =>", {
-        CreditsRemaining: newBalance,
-        TotalCreditsPurchased: totalCreditsPurchased,
-        LastCreditsConsumed: totalBillingUnits,
-      });
+      // console.log("UPDATING CREDITS BALANCE =>", {
+      //   CreditsRemaining: newBalance,
+      //   TotalCreditsPurchased: totalCreditsPurchased,
+      //   LastCreditsConsumed: totalBillingUnits,
+      // });
     } catch (creditUpdateError) {
       console.error("CREDIT UPDATE ERROR:", creditUpdateError);
     }
@@ -540,19 +597,19 @@ module.exports = async (req, res) => {
         );
       }
 
-      console.log("API TENANT UPDATED:", newBalance, tenantCreditStatus);
+      // console.log("API TENANT UPDATED:", newBalance, tenantCreditStatus);
     } catch (tenantUpdateError) {
       console.error("API TENANT UPDATE ERROR:", tenantUpdateError);
     }
 
-    console.log("API TENANT CREDITS UPDATED:", newBalance);
+    // console.log("API TENANT CREDITS UPDATED:", newBalance);
 
     // ============================================
     // HTAG CONSUMPTION LOG
     // ============================================
 
     try {
-      console.log("ENTERING HTAG CONSUMPTION LOG BLOCK");
+      // console.log("ENTERING HTAG CONSUMPTION LOG BLOCK");
 
       const insertedRow = await htagConsumptionTable.insertRow({
         ModuleName: "Acquisition",
@@ -578,7 +635,7 @@ module.exports = async (req, res) => {
         CreditCostBreakdown: usageBreakdown.join("\n"),
       });
 
-      console.log("HTAG INSERT RESULT:", JSON.stringify(insertedRow, null, 2));
+      // console.log("HTAG INSERT RESULT:", JSON.stringify(insertedRow, null, 2));
     } catch (htagLogError) {
       console.error(
         "HTAG CONSUMPTION LOG ERROR:",
@@ -614,10 +671,10 @@ module.exports = async (req, res) => {
       console.error("LOGGING ERROR:", loggingError);
     }
 
-    console.log(
-      "HTAG SOLD SEARCH RESPONSE:",
-      JSON.stringify(soldData, null, 2)
-    );
+    // console.log(
+    //   "HTAG SOLD SEARCH RESPONSE:",
+    //   JSON.stringify(soldData, null, 2)
+    // );
 
     // ============================================
     // HANDLE CREDIT LIMIT
