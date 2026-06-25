@@ -352,15 +352,70 @@
           >
             Welcome <span id="companyName">...</span>
           </div>
-          <div
-            id="companyImagePlaceholder"
-            style="
-              width: 30px;
-              height: 30px;
-              border-radius: 50%;
-              background: #e0e0e0;
-            "
-          ></div>
+          <div style="position: relative">
+            <div
+              id="companyImagePlaceholder"
+              onclick="toggleProfilePopup()"
+              style="
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                background: #e0e0e0;
+                cursor: pointer;
+                border: 2px solid #e5e5e5;
+                transition: 0.2s;
+              "
+            ></div>
+
+            <div
+              id="profilePopup"
+              style="
+                display: none;
+                position: absolute;
+                top: 45px;
+                right: 0;
+                width: 260px;
+                background: #3c4043;
+                color: #fff;
+                border-radius: 8px;
+                padding: 14px;
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+                z-index: 99999;
+              "
+            >
+              <div
+                style="font-size: 13px; font-weight: 600; margin-bottom: 12px"
+              >
+                Profile
+              </div>
+
+              <div style="font-size: 12px; color: #d7d7d7">
+                Available Credits
+              </div>
+
+              <div
+                id="popupAvailableCredits"
+                style="font-size: 18px; font-weight: 600; margin-bottom: 12px"
+              >
+                --
+              </div>
+
+              <div style="font-size: 12px; color: #d7d7d7">
+                Total Credits Purchased
+              </div>
+
+              <div
+                id="popupTotalCredits"
+                style="font-size: 15px; margin-bottom: 12px"
+              >
+                --
+              </div>
+
+              <div style="font-size: 12px; color: #d7d7d7">Last Top-up</div>
+
+              <div id="popupLastTopup" style="font-size: 15px">--</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -435,6 +490,7 @@
           renderHeader();
           renderTasks();
           loadOrgDetails();
+          loadCreditProfile();
         });
       }
 
@@ -484,6 +540,65 @@
             });
         }
       }
+
+      async function loadCreditProfile() {
+        try {
+          const senderSearch = await ZOHO.CRM.API.searchRecord({
+            Entity: "Sender_IDs",
+            Type: "criteria",
+            Query: "(Sender_Type:equals:HTag)",
+          });
+
+          if (!senderSearch.data || senderSearch.data.length === 0) {
+            return;
+          }
+
+          const sender = senderSearch.data[0];
+
+          document.getElementById("popupAvailableCredits").innerText =
+            sender.Available_Credits ?? "--";
+
+          document.getElementById("popupTotalCredits").innerText =
+            sender.Total_Credits_Purchased ?? "--";
+
+          let topup = "--";
+
+          if (sender.Last_Top_Up || sender.Last_Top_Up_Date) {
+            topup =
+              (sender.Last_Top_Up || "--") +
+              " Credits\n" +
+              (sender.Last_Top_Up_Date || "");
+          }
+
+          document.getElementById("popupLastTopup").innerHTML = topup.replace(
+            "\n",
+            "<br>"
+          );
+        } catch (err) {
+          console.error("Profile Credit Load Error", err);
+        }
+      }
+
+      function toggleProfilePopup() {
+        const popup = document.getElementById("profilePopup");
+
+        popup.style.display =
+          popup.style.display === "block" ? "none" : "block";
+      }
+
+      document.addEventListener("click", function (e) {
+        const popup = document.getElementById("profilePopup");
+        const avatar = document.getElementById("companyImagePlaceholder");
+
+        if (
+          popup &&
+          avatar &&
+          !popup.contains(e.target) &&
+          !avatar.contains(e.target)
+        ) {
+          popup.style.display = "none";
+        }
+      });
 
       /* ===== HEADER RENDER ===== */
       function renderHeader() {
@@ -1113,7 +1228,7 @@
         let html = `
 <div class="modal-overlay">
     <div class="modal-box" style="
-    width:850px;
+    width:700px;
     max-width:95%;
     max-height:85vh;
     overflow:auto;
@@ -1139,33 +1254,75 @@
         background:#fafafa;
     ">
 
-        <label style="
-            display:block;
-            margin-bottom:8px;
-            font-weight:600;
-        ">
-            Select Result Limit
+        <div style="
+    display:flex;
+    gap:20px;
+    align-items:flex-end;
+    margin-bottom:18px;
+">
+
+    <div style="width:220px;">
+
+        <div style="
+    display:flex;
+    align-items:flex-end;
+    gap:18px;
+    margin-bottom:20px;
+">
+
+    <div style="width:170px;">
+
+        <label style="font-weight:600;display:block;margin-bottom:8px;">
+            Results
         </label>
 
         <select
             id="comparableLimit"
-            style="
-                width:100%;
-                padding:10px;
-                margin-bottom:15px;
-            "
+            style="width:100%;padding:10px;"
         >
-        <option value="1">1 Results</option>
-            <option value="5" selected>5 Results</option>
-            <option value="10">10 Results</option>
-            <option value="15">15 Results</option>
-            <option value="20">20 Results</option>
-            <option value="25">25 Results</option>
+            <option value="1">1</option>
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+            <option value="20">20</option>
+            <option value="25">25</option>
         </select>
 
-        <button id="startComparableSearch">
-            Search Comparable Sales
-        </button>
+    </div>
+
+    <div style="width:170px;">
+
+        <label style="font-weight:600;display:block;margin-bottom:8px;">
+            Radius
+        </label>
+
+        <select
+            id="comparableRadius"
+            style="width:100%;padding:10px;"
+        >
+            <option value="2" selected>2 km</option>
+            <option value="3">3 km</option>
+            <option value="4">4 km</option>
+            <option value="5">5 km</option>
+            <option value="6">6 km</option>
+            <option value="7">7 km</option>
+            <option value="8">8 km</option>
+            <option value="9">9 km</option>
+            <option value="10">10 km</option>
+        </select>
+
+    </div>
+
+</div>
+
+<button
+    id="startComparableSearch"
+    style="
+        min-width:220px;
+    "
+>
+    Search Comparable Sales
+</button>
 
     </div>
 
@@ -1176,11 +1333,12 @@
 `;
 
         document.body.insertAdjacentHTML("beforeend", html);
-        const selectedLimit = await new Promise((resolve) => {
+        const searchOptions = await new Promise((resolve) => {
           document
             .getElementById("startComparableSearch")
             .addEventListener("click", () => {
               const limit = document.getElementById("comparableLimit").value;
+              const radius = document.getElementById("comparableRadius").value;
 
               document.getElementById("comparableSalesContent").innerHTML = `
         <div style="padding:20px; text-align:center; color:#777;">
@@ -1188,7 +1346,10 @@
         </div>
       `;
 
-              resolve(limit);
+              resolve({
+                limit,
+                radius,
+              });
             });
         });
 
@@ -1388,7 +1549,9 @@
               "&address_key=" +
               encodeURIComponent(addressKey) +
               "&limit=" +
-              selectedLimit,
+              searchOptions.limit +
+              "&radius=" +
+              searchOptions.radius,
 
             {
               method: "GET",
@@ -1585,6 +1748,34 @@ ${p.bedrooms}b | ${p.bathrooms}ba</td>
             </div>
         </div>
 
+        <div style="
+    display:flex;
+    gap:10px;
+    margin:15px 0;
+">
+
+    <div style="
+        background:#f5f5f5;
+        padding:8px 14px;
+        border-radius:20px;
+        font-size:12px;
+        font-weight:500;
+    ">
+        Results: ${searchOptions.limit}
+    </div>
+
+    <div style="
+        background:#f5f5f5;
+        padding:8px 14px;
+        border-radius:20px;
+        font-size:12px;
+        font-weight:500;
+    ">
+        Radius: ${searchOptions.radius} km
+    </div>
+
+</div>
+
         <div style="max-height:260px; overflow:auto; border:1px solid #eee; border-radius:8px;">
             <table style="width:100%; border-collapse:collapse; text-align:left;">
                 <thead style="background:#f9fafb; position:sticky; top:0;">
@@ -1599,13 +1790,13 @@ ${p.bedrooms}b | ${p.bathrooms}ba</td>
             </table>
         </div>
 
-        <div style="
-    font-size:11px;
-    color:#c62828;
-    margin-bottom:10px;
+       <div style="
+    font-size:12px;
+    color:#555;
+    margin-top:12px;
 ">
-    Results shown are based on comparable properties
-    sold within a 2km radius of the selected property.
+    Showing <b>${searchOptions.limit}</b> comparable sales within a
+    <b>${searchOptions.radius} km</b> radius.
 </div>
 
         <div style="margin-top:16px; text-align:right;">

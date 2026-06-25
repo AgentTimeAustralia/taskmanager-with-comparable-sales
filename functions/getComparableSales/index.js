@@ -285,6 +285,7 @@ module.exports = async (req, res) => {
     const address = url.searchParams.get("address");
     const existingAddressKey = url.searchParams.get("address_key");
     const limit = Number(url.searchParams.get("limit")) || 5;
+    const radius = Number(url.searchParams.get("radius")) || 2;
 
     if (!address) {
       res.writeHead(400, {
@@ -447,7 +448,7 @@ module.exports = async (req, res) => {
     const soldSearchUrl =
       `https://api.htagai.com/v1/property/sold/search?` +
       `address_key=${encodeURIComponent(addressKey)}` +
-      `&radius_km=2` +
+      `&radius_km=${radius}` +
       `&proximity=any` +
       `&limit=${limit}`;
 
