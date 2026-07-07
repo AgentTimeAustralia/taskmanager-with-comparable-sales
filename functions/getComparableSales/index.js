@@ -260,7 +260,7 @@ module.exports = async (req, res) => {
         JSON.stringify({
           error: "insufficient_credits",
 
-          message: `Minimum ${MIN_REQUIRED_CREDITS} credits required to run Comparable Sales.`,
+          message: `Oops! Low credits left. Minimum ${MIN_REQUIRED_CREDITS} credits required to run Comparable Sales.`,
 
           available_credits: currentCredits,
 
@@ -400,7 +400,7 @@ module.exports = async (req, res) => {
           JSON.stringify({
             error: "payment_required",
             message:
-              "HTAG API credits exhausted during address standardisation.",
+              "Oops! You have exhausted credits. Please top-up and try again.",
           })
         );
 
@@ -690,7 +690,7 @@ module.exports = async (req, res) => {
         JSON.stringify({
           error: "payment_required",
           message:
-            "HTAG API credits exhausted during comparable sales search. Contact support@agenttime.au",
+            "Oops! API credits exhausted. Please contact support@agenttime.au",
         })
       );
 

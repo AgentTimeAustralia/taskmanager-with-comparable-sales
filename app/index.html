@@ -485,7 +485,6 @@
 
           recordData = res.data[0];
           window.recordData = recordData;
-          // console.log("FULL RECORD DATA:", recordData);
 
           renderHeader();
           renderTasks();
@@ -500,8 +499,6 @@
         // STEP 1 — Try org variable
         ZOHO.CRM.API.getOrgVariable("company_name")
           .then(function (res) {
-            // console.log("ORG VAR RESPONSE:", res);
-
             let name = res?.Success?.Content;
 
             if (name) {
@@ -518,8 +515,6 @@
         function fallbackToUser() {
           ZOHO.CRM.CONFIG.getCurrentUser()
             .then(function (res) {
-              // console.log("USER DATA:", res);
-
               let email = res?.users?.[0]?.email || "";
 
               if (email.includes("@")) {
@@ -619,10 +614,6 @@
       function renderTasks() {
         const container = document.getElementById("taskContainer");
         const tasks = recordData.Tasklists;
-        console.log("Acquisition Type:", recordData.Acquisition_Type);
-        console.log("Phase:", recordData.Phase);
-        console.log("Acquisition Phase:", recordData.Acquisition_Phase);
-        console.log("TASKLIST RAW:", tasks);
         if (!tasks || tasks.length === 0) {
           container.innerHTML = "No tasks found";
           return;
@@ -665,9 +656,6 @@
             console.warn("Missing Task_Name field:", row);
             return;
           }
-
-          // Detect heading rows
-          // Detect heading rows (supports ===, ---, ▶▶▶)
           if (
             name.includes("===") ||
             name.includes("---") ||
@@ -679,8 +667,6 @@
               .replace(/▶+/g, "") // 🔥 handles ▶▶▶
               .trim()
               .toLowerCase();
-
-            // console.log("Detected Phase Heading:", currentPhase);
 
             return;
           }
@@ -827,15 +813,9 @@
     }, 'Due_Date', this.value); handleDateChange(${task.index})"
 />
 
-    ${
-      task.Task_Name === "Property Shortlisted for Offer"
-        ? `<button onclick="openComparableSales(${task.index})">
-        Comparable Sales
-        </button>`
-        : `<button onclick="openChecklist(${task.index})">
-        Checklist
-        </button>`
-    }
+    <button onclick="openChecklist(${task.index})">
+    Checklist
+</button>
 
 </div>
 `;
@@ -880,11 +860,72 @@
 
       function updateStatus(index, value) {
         recordData.Tasklists[index].Status = value;
+
+        updateAutomationTrigger(recordData.Tasklists[index].Task_Name, value);
       }
 
       function markComplete(index) {
         recordData.Tasklists[index].Status = "Completed";
         renderTasks(); // refresh UI
+      }
+
+      function updateAutomationTrigger(taskName, status) {
+
+        if (status !== "Completed") {
+          return;
+        }
+
+        switch (taskName) {
+          case "Propose LGA / Suburbs List":
+            recordData.Notify_LGA_Suburbs_Approval = true;
+          
+
+            break;
+
+          case "Offer Placement":
+            recordData.Notify_Offer_Placement = true;
+            break;
+
+          case "COS Signed Stakeholder":
+            recordData.Notify_COS_Signed_Stakeholder = true;
+            break;
+
+          case "Finance Approval":
+            recordData.Notify_Finance_Approval = true;
+            break;
+
+          case "Mortgage Broker Intro":
+            recordData.Notify_Mortgage_Broker_Intro = true;
+            break;
+
+          case "Conveyancer Intro":
+            recordData.Notify_Conveyancer_Intro = true;
+            break;
+
+          case "B&P Intro":
+            recordData.Notify_B_P_Intro = true;
+            break;
+
+          case "B&P Completed":
+            recordData.Notify_B_P_Completed = true;
+            break;
+
+          case "Conveyancer Settlement Confirmation":
+            recordData.Notify_Conveyancer_Settlement_Confirmation = true;
+            break;
+
+          case "Confirm Settlement Completion":
+            recordData.Notify_Confirm_Settlement_Completion = true;
+            break;
+
+          case "Quantity Surveyor Intro":
+            recordData.Notify_Quantity_Surveyor_Intro = true;
+            break;
+
+          case "Congratulate on Settlement & Google Review Request":
+            recordData.Notify_Congratulations_Google_Review = true;
+            break;
+        }
       }
 
       function saveTasks() {
@@ -943,15 +984,28 @@
 
             Settlement_In_Days: recordData.Settlement_In_Days,
             Settlement_Due_Date: recordData.Settlement_Due_Date,
+
+            Notify_LGA_Suburbs_Approval: recordData.Notify_LGA_Suburbs_Approval,
+            Notify_Offer_Placement: recordData.Notify_Offer_Placement,
+            Notify_COS_Signed_Stakeholder:
+              recordData.Notify_COS_Signed_Stakeholder,
+            Notify_Finance_Approval: recordData.Notify_Finance_Approval,
+            Notify_Mortgage_Broker_Intro:
+              recordData.Notify_Mortgage_Broker_Intro,
+            Notify_Conveyancer_Intro: recordData.Notify_Conveyancer_Intro,
+            Notify_B_P_Intro: recordData.Notify_B_P_Intro,
+            Notify_B_P_Completed: recordData.Notify_B_P_Completed,
+            Notify_Conveyancer_Settlement_Confirmation:
+              recordData.Notify_Conveyancer_Settlement_Confirmation,
+            Notify_Confirm_Settlement_Completion:
+              recordData.Notify_Confirm_Settlement_Completion,
+            Notify_Quantity_Surveyor_Intro:
+              recordData.Notify_Quantity_Surveyor_Intro,
+            Notify_Congratulations_Google_Review:
+              recordData.Notify_Congratulations_Google_Review,
           },
           Trigger: ["workflow"], // Optional: triggers workflows if needed
         };
-
-        // console.log("FINAL ATTEMPT CONFIG:", config);
-        //     console.log("CHECKLIST FIELD:", updatedRows.map(r => ({
-        //     id: r.id,
-        //     checklist: r.Checklist
-        // })));
 
         ZOHO.CRM.API.updateRecord(config)
           .then(function (res) {
@@ -987,40 +1041,41 @@
       function handleDateChange(index) {
         const task = recordData.Tasklists[index];
 
-        if (!task.Start_Date || !task.Due_Date) return;
+        if (!task.Start_Date || !task.Due_Date) {
+          console.warn("Start Date or Due Date missing.");
+          return;
+        }
 
         const start = new Date(task.Start_Date);
         const due = new Date(task.Due_Date);
 
-        if (isNaN(start) || isNaN(due)) return;
-
-        const days = Math.ceil((due - start) / (1000 * 60 * 60 * 24));
-        if (days < 0) return;
-
-        const name = task.Task_Name;
-
-        //  B&P (ONLY this task)
-        if (name === "B&P Completed") {
-          recordData.B_P_Completion_In_Days = days;
-          recordData.B_P_Completion_Due_Date = task.Due_Date;
+        if (isNaN(start) || isNaN(due)) {
+          console.error("Invalid Date");
+          return;
         }
 
-        // Finance
-        if (name === "Finance Approval") {
-          recordData.Finance_Approval_In_Days = days;
-          recordData.Finance_Approval_Due_Date = task.Due_Date;
-        }
+        const days = Math.floor((due - start) / (1000 * 60 * 60 * 24));
 
-        // Settlement (2 tasks)
-        if (
-          name === "Conveyancer Settlement Confirmation" ||
-          name === "Confirm Settlement Completion"
-        ) {
-          recordData.Settlement_In_Days = days;
-          recordData.Settlement_Due_Date = task.Due_Date;
-        }
+        switch (task.Task_Name) {
+          case "B&P Completed":
+            recordData.B_P_Completion_In_Days = days;
+            recordData.B_P_Completion_Due_Date = task.Due_Date;
+            break;
 
-        console.log("Mapped Task:", name, "Days:", days);
+          case "Finance Approval":
+            recordData.Finance_Approval_In_Days = days;
+            recordData.Finance_Approval_Due_Date = task.Due_Date;
+            break;
+
+          case "Conveyancer Settlement Confirmation":
+          case "Confirm Settlement Completion":
+            recordData.Settlement_In_Days = days;
+            recordData.Settlement_Due_Date = task.Due_Date;
+            break;
+
+          default:
+            console.warn("No mapping found for:", task.Task_Name);
+        }
       }
 
       function updateField(index, field, value) {
@@ -1100,7 +1155,6 @@
     `;
 
         document.body.insertAdjacentHTML("beforeend", html);
-        // console.log("RAW CHECKLIST:", raw);
       }
 
       // Update checkbox state
@@ -1216,791 +1270,6 @@
 
         // Optional auto-save
         saveTasks();
-      }
-
-      // =============================================
-      // COMPARABLE SALES POPUP
-      // =============================================
-
-      async function openComparableSales(index) {
-        const task = recordData.Tasklists[index];
-
-        let html = `
-<div class="modal-overlay">
-    <div class="modal-box" style="
-    width:700px;
-    max-width:95%;
-    max-height:85vh;
-    overflow:auto;
-">
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 style="margin:0;">Comparable Sales Evidence</h3>
-
-            <span
-                style="cursor:pointer; font-size:18px;"
-                onclick="closeComparableSales()"
-            >
-                ✖
-            </span>
-        </div>
-
-        <div id="comparableSalesContent">
-
-    <div style="
-        padding:20px;
-        border:1px solid #eee;
-        border-radius:10px;
-        background:#fafafa;
-    ">
-
-        <div style="
-    display:flex;
-    gap:20px;
-    align-items:flex-end;
-    margin-bottom:18px;
-">
-
-    <div style="width:220px;">
-
-        <div style="
-    display:flex;
-    align-items:flex-end;
-    gap:18px;
-    margin-bottom:20px;
-">
-
-    <div style="width:170px;">
-
-        <label style="font-weight:600;display:block;margin-bottom:8px;">
-            Results
-        </label>
-
-        <select
-            id="comparableLimit"
-            style="width:100%;padding:10px;"
-        >
-            <option value="1">1</option>
-            <option value="5" selected>5</option>
-            <option value="10">10</option>
-            <option value="15">15</option>
-            <option value="20">20</option>
-            <option value="25">25</option>
-        </select>
-
-    </div>
-
-    <div style="width:170px;">
-
-        <label style="font-weight:600;display:block;margin-bottom:8px;">
-            Radius
-        </label>
-
-        <select
-            id="comparableRadius"
-            style="width:100%;padding:10px;"
-        >
-            <option value="2" selected>2 km</option>
-            <option value="3">3 km</option>
-            <option value="4">4 km</option>
-            <option value="5">5 km</option>
-            <option value="6">6 km</option>
-            <option value="7">7 km</option>
-            <option value="8">8 km</option>
-            <option value="9">9 km</option>
-            <option value="10">10 km</option>
-        </select>
-
-    </div>
-
-</div>
-
-<button
-    id="startComparableSearch"
-    style="
-        min-width:220px;
-    "
->
-    Search Comparable Sales
-</button>
-
-    </div>
-
-</div>
-
-    </div>
-</div>
-`;
-
-        document.body.insertAdjacentHTML("beforeend", html);
-        const searchOptions = await new Promise((resolve) => {
-          document
-            .getElementById("startComparableSearch")
-            .addEventListener("click", () => {
-              const limit = document.getElementById("comparableLimit").value;
-              const radius = document.getElementById("comparableRadius").value;
-
-              document.getElementById("comparableSalesContent").innerHTML = `
-        <div style="padding:20px; text-align:center; color:#777;">
-          Fetching comparable sales...
-        </div>
-      `;
-
-              resolve({
-                limit,
-                radius,
-              });
-            });
-        });
-
-        try {
-          // ---------------------------------------------
-          // GET ACQUISITION ADDRESS
-          // ---------------------------------------------
-
-          // =============================================
-          // FETCH ACQUISITION RECORD
-          // =============================================
-
-          const acquisitionResponse = await ZOHO.CRM.API.getRecord({
-            Entity: "Acquisitions",
-            RecordID: recordId,
-          });
-
-          console.log("ACQUISITION RESPONSE:", acquisitionResponse);
-
-          if (
-            !acquisitionResponse ||
-            !acquisitionResponse.data ||
-            acquisitionResponse.data.length === 0
-          ) {
-            document.getElementById("comparableSalesContent").innerHTML = `
-        <div style="color:red;">
-            Acquisition record not found.
-        </div>
-    `;
-            return;
-          }
-
-          const acquisitionData = acquisitionResponse.data[0];
-
-          console.log("ACQUISITION DATA:", acquisitionData);
-
-          // =============================================
-          // INTERESTED PROPERTY ID
-          // =============================================
-
-          const interestedPropertyId =
-            acquisitionData.Interested_Property_ID || "";
-          window.currentInterestedPropertyId = interestedPropertyId;
-
-          if (!interestedPropertyId) {
-            document.getElementById("comparableSalesContent").innerHTML = `
-        <div style="color:red;">
-            No Interested Property linked yet.
-        </div>
-    `;
-
-            return;
-          }
-
-          console.log("INTERESTED PROPERTY ID:", interestedPropertyId);
-
-          // =============================================
-          // FETCH PROPERTY RECORD
-          // =============================================
-
-          const propertyResponse = await ZOHO.CRM.API.getRecord({
-            Entity: "Properties",
-            RecordID: interestedPropertyId,
-          });
-
-          console.log("PROPERTY RESPONSE:", propertyResponse);
-
-          if (
-            !propertyResponse ||
-            !propertyResponse.data ||
-            propertyResponse.data.length === 0
-          ) {
-            document.getElementById("comparableSalesContent").innerHTML = `
-        <div style="color:red;">
-            Property record not found.
-        </div>
-    `;
-            return;
-          }
-
-          const propertyRecord = propertyResponse.data[0];
-
-          console.log("PROPERTY RECORD:", propertyRecord);
-
-          const addressKey = propertyRecord.Address_Key || "";
-
-          console.log("PROPERTY ADDRESS KEY:", addressKey);
-          // =============================================
-          // ADDRESS BUILDING
-          // =============================================
-
-          let acquisitionAddress = propertyRecord.Address || "";
-
-          const suburb = propertyRecord.Suburb || "";
-
-          const postcode = propertyRecord.Postcode || "";
-
-          // Remove weird spaces
-          acquisitionAddress = acquisitionAddress.replace(/\s+/g, " ").trim();
-
-          // If suburb missing → append
-          if (
-            suburb &&
-            !acquisitionAddress.toLowerCase().includes(suburb.toLowerCase())
-          ) {
-            acquisitionAddress += `, ${suburb}`;
-          }
-
-          // If postcode missing → append
-          if (postcode && !acquisitionAddress.includes(postcode)) {
-            acquisitionAddress += ` ${postcode}`;
-          }
-
-          // FINAL SAFETY CLEANUP
-          acquisitionAddress = acquisitionAddress
-            .replace(/,\s*,/g, ",")
-            .replace(/\s+/g, " ")
-            .replace(/,+$/g, "")
-            .trim();
-
-          // =============================================
-          // FALLBACK ADDRESS SEARCH
-          // =============================================
-
-          const searchAddress = acquisitionAddress.split(",")[0].trim();
-
-          console.log("HTAG SEARCH ADDRESS:", searchAddress);
-
-          if (!acquisitionAddress) {
-            document.getElementById("comparableSalesContent").innerHTML = `
-        <div style="color:red;">
-            Property address not found.
-        </div>
-    `;
-
-            return;
-          }
-
-          console.log("FINAL ADDRESS:", acquisitionAddress);
-
-          // =============================================
-          // BACKEND CALL
-          // =============================================
-
-          const backendUrl = `https://project-rainfall-7006542512.development.catalystserverless.com.au/server/getComparableSales`;
-          console.log("CALLING:", backendUrl);
-
-          // =============================================
-          // GET CURRENT CRM USER
-          // =============================================
-
-          // =============================================
-          // GET CURRENT CRM USER
-          // =============================================
-
-          const currentUserResponse = await ZOHO.CRM.CONFIG.getCurrentUser();
-
-          const currentUser = currentUserResponse?.users?.[0] || {};
-
-          // =============================================
-          // GET CURRENT ORG INFO
-          // =============================================
-
-          const orgInfoResponse = await ZOHO.CRM.CONFIG.getOrgInfo();
-
-          console.log("ORG INFO RESPONSE:", orgInfoResponse);
-
-          const currentOrg = orgInfoResponse?.org?.[0] || {};
-
-          console.log("FINAL ORG OBJECT:", currentOrg);
-
-          // =============================================
-          // BUILD REQUEST HEADERS
-          // =============================================
-
-          const requestHeaders = {
-            "x-org-id":
-              currentOrg.zgid ||
-              currentOrg.company_name ||
-              currentOrg.id ||
-              "Unknown Org",
-
-            "x-crm-user":
-              currentUser.full_name || currentUser.email || "Unknown User",
-
-            "x-record-id": recordId || "Unknown Record",
-          };
-
-          // =============================================
-          // BACKEND REQUEST
-          // =============================================
-
-          const response = await fetch(
-            backendUrl +
-              "?address=" +
-              encodeURIComponent(acquisitionAddress) +
-              "&address_key=" +
-              encodeURIComponent(addressKey) +
-              "&limit=" +
-              searchOptions.limit +
-              "&radius=" +
-              searchOptions.radius,
-
-            {
-              method: "GET",
-
-              credentials: "include",
-
-              headers: requestHeaders,
-            }
-          );
-
-          const responseText = await response.text();
-
-          let soldData;
-
-          try {
-            soldData = JSON.parse(responseText);
-          } catch (e) {
-            console.error("INVALID JSON RESPONSE:", responseText);
-
-            throw new Error(responseText);
-          }
-
-          if (response.status === 401) {
-            window.open(
-              "https://project-rainfall-7006542512.development.catalystserverless.com.au/__catalyst/auth/login?service_url=/app/auth-success.html",
-
-              "_blank",
-
-              "width=500,height=700"
-            );
-
-            document.getElementById("comparableSalesContent").innerHTML = `
-    <div style="
-        padding:20px;
-        text-align:center;
-        color:#555;
-    ">
-
-        Authentication required.
-
-        <br><br>
-
-        Please login and click Comparable Sales again.
-
-    </div>
-`;
-
-            return;
-          }
-
-          if (!response.ok) {
-            throw new Error(
-              soldData.message || `Backend Error: ${response.status}`
-            );
-          }
-
-          console.log("FINAL SOLD DATA:", soldData);
-          console.log("LAST TOPUP DATE:", soldData.credit_data.last_topup_date);
-
-          try {
-            if (soldData.credit_data) {
-              // alert(JSON.stringify(soldData.credit_data, null, 2));
-
-              await updateHTagSenderRecord(soldData.credit_data);
-            }
-          } catch (err) {
-            console.error("HTAG CREDIT UPDATE FAILED", err);
-          }
-
-          // =============================================
-          // HANDLE API ERRORS
-          // =============================================
-
-          if (soldData.error) {
-            document.getElementById("comparableSalesContent").innerHTML = `
-    <div style="
-        padding:20px;
-        border-radius:12px;
-        background:#fff5f5;
-        border:1px solid #ffcdd2;
-        color:#c62828;
-    ">
-
-        <div style="
-            font-size:16px;
-            font-weight:600;
-            margin-bottom:12px;
-        ">
-            No Comparable Sales Found
-        </div>
-
-        <div style="
-            font-size:13px;
-            margin-bottom:10px;
-        ">
-            HTAG could not find comparable sales for:
-        </div>
-
-        <div style="
-            background:white;
-            border:1px dashed #ef9a9a;
-            padding:12px;
-            border-radius:8px;
-            color:#333;
-            font-size:13px;
-            word-break:break-word;
-        ">
-            ${acquisitionAddress}
-        </div>
-
-    </div>
-`;
-
-            return;
-          }
-
-          // ---------------------------------------------
-          // SOLD RESULTS
-          // ---------------------------------------------
-
-          const soldResults = soldData.comparable_sales || [];
-
-          if (soldResults.length === 0) {
-            document.getElementById("comparableSalesContent").innerHTML = `
-    <div style="
-        padding:20px;
-        border-radius:12px;
-        background:#fff8e1;
-        border:1px solid #ffe082;
-        color:#8d6e63;
-    ">
-        No sold properties found nearby for:
-        <br><br>
-        <b>${acquisitionAddress}</b>
-    </div>
-`;
-
-            return;
-          }
-
-          // ---------------------------------------------
-          // STEP 3 - ANALYZE & RENDER UI
-          // ---------------------------------------------
-
-          const validPrices = soldResults
-            .map((p) => p.sold_price)
-            .filter((price) => price !== null && price > 0);
-
-          const maxPrice = validPrices.length ? Math.max(...validPrices) : 0;
-          const minPrice = validPrices.length ? Math.min(...validPrices) : 0;
-
-          // Build the text version for CRM Notes
-          let notesText = `Comparable Sales Analysis\n`;
-          notesText += `Market Ceiling: $${maxPrice.toLocaleString()}\n`;
-          notesText += `Market Floor: $${minPrice.toLocaleString()}\n\n`;
-
-          soldResults.forEach((p, i) => {
-            notesText += `${i + 1}. ${p.street_address}: $${(
-              p.sold_price || 0
-            ).toLocaleString()} (${p.bedrooms}b/${p.bathrooms}ba)\n`;
-          });
-
-          // Generate the Visual Table HTML
-          let tableRows = soldResults
-            .map(
-              (p) => `
-        <tr style="border-bottom:1px solid #eee; font-size:12px;">
-            <td style="padding:10px;"><b>${
-              p.street_address
-            }</b><br><span style="color:#777;">${p.suburb}</span></td>
-            <td style="padding:10px;">$${(
-              p.sold_price || 0
-            ).toLocaleString()}</td>
-            <td style="padding:10px; color:#555;">${
-              p.property_type || "Property"
-            }
-<br>
-${p.bedrooms}b | ${p.bathrooms}ba</td>
-            <td style="padding:10px; font-size:11px;">${p.sold_date}</td>
-        </tr>
-    `
-            )
-            .join("");
-
-          document.getElementById("comparableSalesContent").innerHTML = `
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <div style="flex:1; background:#e8f5e9; padding:12px; border-radius:8px; border:1px solid #c8e6c9; text-align:center;">
-                <div style="font-size:10px; color:#2e7d32; font-weight:600;">MARKET CEILING</div>
-                <div style="font-size:18px; font-weight:700;">$${maxPrice.toLocaleString()}</div>
-            </div>
-            <div style="flex:1; background:#ffebee; padding:12px; border-radius:8px; border:1px solid #ffcdd2; text-align:center;">
-                <div style="font-size:10px; color:#c62828; font-weight:600;">MARKET FLOOR</div>
-                <div style="font-size:18px; font-weight:700;">$${minPrice.toLocaleString()}</div>
-            </div>
-        </div>
-
-        <div style="
-    display:flex;
-    gap:10px;
-    margin:15px 0;
-">
-
-    <div style="
-        background:#f5f5f5;
-        padding:8px 14px;
-        border-radius:20px;
-        font-size:12px;
-        font-weight:500;
-    ">
-        Results: ${searchOptions.limit}
-    </div>
-
-    <div style="
-        background:#f5f5f5;
-        padding:8px 14px;
-        border-radius:20px;
-        font-size:12px;
-        font-weight:500;
-    ">
-        Radius: ${searchOptions.radius} km
-    </div>
-
-</div>
-
-        <div style="max-height:260px; overflow:auto; border:1px solid #eee; border-radius:8px;">
-            <table style="width:100%; border-collapse:collapse; text-align:left;">
-                <thead style="background:#f9fafb; position:sticky; top:0;">
-                    <tr>
-                        <th style="padding:10px; font-size:11px; color:#666;">Address</th>
-                        <th style="padding:10px; font-size:11px; color:#666;">Price</th>
-                        <th style="padding:10px; font-size:11px; color:#666;">Specs</th>
-                        <th style="padding:10px; font-size:11px; color:#666;">Date</th>
-                    </tr>
-                </thead>
-                <tbody>${tableRows}</tbody>
-            </table>
-        </div>
-
-       <div style="
-    font-size:12px;
-    color:#555;
-    margin-top:12px;
-">
-    Showing <b>${searchOptions.limit}</b> comparable sales within a
-    <b>${searchOptions.radius} km</b> radius.
-</div>
-
-        <div style="margin-top:16px; text-align:right;">
-            <button onclick="saveComparableSalesNotes(\`${encodeURIComponent(
-              notesText
-            )}\`)">
-                Attach To Notes
-            </button>
-        </div>
-    `;
-        } catch (error) {
-          console.error("COMPARABLE SALES ERROR:", error);
-
-          let errorMessage =
-            "Unknown error. please contact support@agenttime.au.";
-
-          // Zoho SDK errors
-          if (error.message) {
-            errorMessage = error.message;
-          }
-
-          // Backend JSON errors
-          if (error.error) {
-            errorMessage = error.error;
-          }
-
-          // Express/API returned JSON
-          if (error.responseJSON && error.responseJSON.message) {
-            errorMessage = error.responseJSON.message;
-          }
-
-          // Raw string fallback
-          if (typeof error === "string") {
-            errorMessage = error;
-          }
-
-          document.getElementById("comparableSalesContent").innerHTML = `
-    <div style="color:red;">
-        Failed to load comparable sales. please contact support@agenttime.au.
-
-        <br><br>
-
-        Error:
-
-        <br><br>
-
-        ${error.message}
-    </div>
-`;
-        }
-      }
-
-      // =============================================
-      // SAVE NOTES
-      // =============================================
-
-      async function saveComparableSalesNotes(encodedText) {
-        try {
-          const notesText = decodeURIComponent(encodedText);
-
-          if (!notesText || notesText.trim() === "") {
-            showToast(
-              "No comparable sales data to save. Try again later.",
-              true
-            );
-
-            return;
-          }
-
-          // ---------------------------------------------
-          // CREATE ZOHO NOTE RELATED LIST
-          // ---------------------------------------------
-
-          await ZOHO.CRM.API.insertRecord({
-            Entity: "Notes",
-
-            APIData: {
-              Note_Title: "Comparable Sales Evidence",
-
-              Note_Content: notesText,
-
-              Parent_Id: recordId,
-
-              se_module: "Acquisitions",
-            },
-
-            Trigger: ["workflow"],
-          });
-
-          // ---------------------------------------------
-          // CREATE PROPERTY NOTE
-          // ---------------------------------------------
-
-          await ZOHO.CRM.API.insertRecord({
-            Entity: "Notes",
-
-            APIData: {
-              Note_Title: "Comparable Sales Evidence",
-
-              Note_Content: notesText,
-
-              Parent_Id: window.currentInterestedPropertyId,
-
-              se_module: "Properties",
-            },
-
-            Trigger: ["workflow"],
-          });
-
-          showToast("Comparable sales added to Notes successfully.");
-
-          closeComparableSales();
-        } catch (error) {
-          console.error(error);
-
-          showToast(
-            "Failed to save comparable sales notes. please contact support@agenttime.au.",
-            true
-          );
-        }
-      }
-
-      async function updateHTagSenderRecord(creditData) {
-        try {
-          const senderSearch = await ZOHO.CRM.API.searchRecord({
-            Entity: "Sender_IDs",
-            Type: "criteria",
-            Query: "(Sender_Type:equals:HTag)",
-          });
-
-          if (!senderSearch.data || senderSearch.data.length === 0) {
-            console.log("HTag Sender_ID not found");
-            return;
-          }
-
-          const senderId = senderSearch.data[0].id;
-
-          const zohoDateTime =
-            new Date().toISOString().split(".")[0] + "+00:00";
-
-          console.log("DATETIME:", zohoDateTime);
-
-          const lastTopUpDate = creditData.last_topup_date
-            ? new Date(creditData.last_topup_date.replace(" ", "T"))
-                .toISOString()
-                .split(".")[0] + "+00:00"
-            : null;
-
-          const config = {
-            Entity: "Sender_IDs",
-            APIData: {
-              id: senderId,
-
-              Last_Credit_Usage_Date: zohoDateTime,
-
-              Available_Credits: creditData.available_credits,
-
-              Last_Credits_Consumed: creditData.last_credits_consumed,
-
-              Credit_Status: creditData.credit_status,
-
-              Last_Top_Up: creditData.last_topup,
-
-              Last_Top_Up_Date: lastTopUpDate,
-
-              Total_Credits_Purchased: creditData.total_credits_purchased,
-            },
-          };
-
-          console.log(
-            "TOTAL_CREDITS_PURCHASED SENT:",
-            creditData.total_credits_purchased
-          );
-
-          console.log("SENDER UPDATE CONFIG:", config);
-
-          const updateResponse = await ZOHO.CRM.API.updateRecord(config);
-
-          console.log("SENDER UPDATE RESPONSE:", updateResponse);
-
-          const verify = await ZOHO.CRM.API.getRecord({
-            Entity: "Sender_IDs",
-            RecordID: senderId,
-          });
-        } catch (error) {
-          console.error(
-            "SENDER UPDATE ERROR FULL:",
-            JSON.stringify(error, null, 2)
-          );
-
-          console.error("SENDER UPDATE ERROR RAW:", error);
-        }
-      }
-
-      // =============================================
-      // CLOSE POPUP
-      // =============================================
-
-      function closeComparableSales() {
-        const modal = document.querySelector(".modal-overlay");
-
-        if (modal) {
-          modal.remove();
-        }
       }
     </script>
     <div class="watermark">Powered by <span>Agent Time × HtAG</span></div>
