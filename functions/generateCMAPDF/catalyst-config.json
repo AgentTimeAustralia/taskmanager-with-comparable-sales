@@ -1,0 +1,13 @@
+{
+	"deployment": {
+	  "name": "generatecmapdf",
+	  "stack": "node24",
+	  "type": "advancedio",
+	  "env_variables": {
+		"CDP_ENDPOINT": "wss://cdp.catalystsmartbrowz.com.au/__catalyst/headless-chrome?projectId=2710000000011033&api-key=ca698db656211669a06b0804201da5ad458a8a7eb0517cfb0228f13086be0656"
+	  }
+	},
+	"execution": {
+	  "main": "index.js"
+	}
+  }

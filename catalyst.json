@@ -1,7 +1,8 @@
 {
   "functions": {
     "targets": [
-      "getcomparablesales"
+      "getcomparablesales",
+      "generatecmapdf"
     ],
     "ignore": [],
     "source": "functions"

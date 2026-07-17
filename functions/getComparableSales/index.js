@@ -1,129 +1,20 @@
-//Comparable Sales Button Widget
+<!DOCTYPE html>
+<html lang="en">
 
-"use strict";
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>CMA Report</title>
 
-require("dotenv").config();
-// adding what s recomeneded
-
-const catalyst = require("zcatalyst-sdk-node");
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
-
-module.exports = async (req, res) => {
-  const catalystApp = catalyst.initialize(req);
-
-  const datastore = catalystApp.datastore();
-
-  const usageTable = datastore.table("WidgetUsageLogs");
-  const creditsTable = datastore.table("CreditsBalance");
-  const htagConsumptionTable = datastore.table("HTAGConsumptionLogs");
-  const zcql = catalystApp.zcql();
-
-  // =============================================
-  // CORS
-  // =============================================
-
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, x-org-id, x-crm-user, x-record-id"
-  );
-
-  if (req.method === "OPTIONS") {
-    res.writeHead(200);
-
-    res.end();
-
-    return;
-  }
-
-  let startTime;
-
-  let usageBreakdown = [];
-
-  let totalBillingUnits = 0;
-
-  let totalBillingCost = 0;
-
-  let currentBillingBalance = null;
-
-  let creditRow = null;
-
-  let tenantRow = null;
-
-  let newBalance = 0;
-
-  try {
-    // =============================================
-    // AUTHENTICATION CHECK
-    // =============================================
-
-    const currentUser = await catalystApp.userManagement().getCurrentUser();
-
-    // console.log("AUTHENTICATED USER:", currentUser);
-
-    if (!currentUser || !currentUser.user_id) {
-      res.writeHead(401, {
-        "Content-Type": "application/json",
-      });
-
-      res.end(
-        JSON.stringify({
-          success: false,
-          message: "Unauthorized",
-        })
-      );
-
-      return;
-    }
-
-    // =============================================
-    // ORG DETAILS
-    // =============================================
-    // removing white space from org id id exist.
-    const orgId = String(req.headers["x-org-id"] || "").trim();
-    // console.log("ORG ID HEADER:", orgId);
-
-    // const crmUser = req.headers["x-crm-user"] || "Unknown User";
-    // =============================================
-    // FETCH CREDIT BALANCE
-    // =============================================
-
-    const creditResult = await zcql.executeZCQLQuery(
-      `SELECT * FROM CreditsBalance WHERE OrgID='${orgId}'`
-    );
-
-    // console.log("CREDIT RESULT:", JSON.stringify(creditResult, null, 2));
-
-    const apiTenantResult = await zcql.executeZCQLQuery(
-      `SELECT * FROM apiTenants WHERE Org_ID='${orgId}'`
-    );
-
-    const paymentHistoryResult = await zcql.executeZCQLQuery(
-      `SELECT * FROM PaymentHistory
-       WHERE OrgID='${orgId}'
-       ORDER BY LastTopupDate DESC`
-    );
-
-    let lastTopupDate = "";
-    let lastTopup = 0;
-    let totalCreditsPurchased = 0;
-    let latestPayment = null;
-
-    if (paymentHistoryResult && paymentHistoryResult.length > 0) {
-      paymentHistoryResult.forEach((row) => {
-        totalCreditsPurchased += Number(row.PaymentHistory.CreditToppedUp || 0);
-
-        if (
-          !latestPayment ||
-          new Date(row.PaymentHistory.LastTopupDate) >
-            new Date(latestPayment.LastTopupDate)
-        ) {
-          latestPayment = row.PaymentHistory;
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-      });
 
+<<<<<<< HEAD
       if (latestPayment) {
         lastTopupDate = latestPayment.LastTopupDate || "";
         lastTopup = Number(latestPayment.CreditToppedUp || 0);
@@ -349,9 +240,14 @@ module.exports = async (req, res) => {
           body: JSON.stringify({
             addresses: [address],
           }),
+=======
+        @page {
+            size: A4 portrait;
+            margin: 0;
+>>>>>>> 85cccbc (feat: integrate dynamic CRM fields and fix PDF page-break top margins)
         }
-      );
 
+<<<<<<< HEAD
       const standardiseData = await standardiseResponse.json();
 
       // ============================================
@@ -586,106 +482,212 @@ module.exports = async (req, res) => {
           tenantCreditStatus = "Low Credits";
         } else {
           tenantCreditStatus = "Active";
+=======
+        body {
+            background: #fff;
+            color: #222;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+>>>>>>> 85cccbc (feat: integrate dynamic CRM fields and fix PDF page-break top margins)
         }
-      }
 
-      if (tenantRow && tenantRow.ROWID) {
-        await zcql.executeZCQLQuery(
-          `UPDATE apiTenants
-           SET CreditsLeft=${newBalance},
-               CreditStatus='${tenantCreditStatus}'
-           WHERE ROWID='${tenantRow.ROWID}'`
-        );
-      }
+        /* Fixed Standard Page Container (for structured static pages) */
+        .page {
+            width: 100%;
+            height: 297mm; /* Absolute standard A4 page height */
+            max-height: 297mm;
+            padding: 20mm 20mm; /* Generous, standard PDF safe zone margins */
+            position: relative;
+            box-sizing: border-box;
+            overflow: hidden; /* Prevents stray elements from spilling onto next page */
+        }
 
-      // console.log("API TENANT UPDATED:", newBalance, tenantCreditStatus);
-    } catch (tenantUpdateError) {
-      console.error("API TENANT UPDATE ERROR:", tenantUpdateError);
-    }
+        /* Dynamic Page Container (specifically for the dynamic comparable rows list) */
+        .dynamic-page {
+            width: 100%;
+            padding: 20mm 20mm;
+            position: relative;
+            box-sizing: border-box;
+        }
 
-    // console.log("API TENANT CREDITS UPDATED:", newBalance);
+        .cover-page {
+            padding-top: 25mm;
+        }
 
-    // ============================================
-    // HTAG CONSUMPTION LOG
-    // ============================================
+        .summary-page,
+        .comparable-page,
+        .estimation-page,
+        .disclaimer-page {
+            padding-top: 20mm;
+        }
 
-    try {
-      // console.log("ENTERING HTAG CONSUMPTION LOG BLOCK");
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 25px;
+            margin-bottom: 25px;
+            border: none;
+        }
 
-      const insertedRow = await htagConsumptionTable.insertRow({
-        ModuleName: "Acquisition",
+        .left {
+            width: 70%;
+        }
 
-        RequestId: requestId,
+        .right {
+            width: 25%;
+            display: flex;
+            justify-content: flex-end;
+        }
 
-        WidgetName: "Comparable Sales",
+        .logo {
+            width: 180px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+        }
 
-        OrgID: orgId,
+        .cover-image {
+            width: 100%;
+            height: 540px;
+            margin-top: 25px;
+        }
 
-        APIUnitsConsumed: totalBillingUnits,
+        .cover-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            border: none;
+        }
 
-        APICost: totalBillingCost,
+        .title {
+            font-size: 20px;
+            font-weight: 500;
+            color: #505050;
+            margin-top: 14px;
+            margin-bottom: 18px;
+        }
 
-        FunctionName: "getComparableSales",
+        .address {
+            font-size: 18px;
+            color: #555;
+            margin-bottom: 25px;
+        }
 
-        ExecutionDateTime: new Date()
-          .toISOString()
-          .slice(0, 19)
-          .replace("T", " "),
+        .meta {
+            font-size: 11px;
+            line-height: 22px;
+            color: #666;
+        }
 
-        RecordID: req.headers["x-record-id"] || "",
-        CreditCostBreakdown: usageBreakdown.join("\n"),
-      });
+        .section {
+            margin-top: 20px;
+        }
 
-      // console.log("HTAG INSERT RESULT:", JSON.stringify(insertedRow, null, 2));
-    } catch (htagLogError) {
-      console.error(
-        "HTAG CONSUMPTION LOG ERROR:",
-        JSON.stringify(htagLogError, null, 2)
-      );
-    }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            border-bottom: 1.5px solid #f0f0f0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            letter-spacing: -0.2px;
+        }
 
-    // ============================================
-    // Inserting Log To Data Storage
-    // ============================================
+        .sales-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-    try {
-      await usageTable.insertRow({
-        Org_ID: req.headers["x-org-id"] || "Unknown Org",
+        /* Premium Summary Cards Styling */
+        .summary-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            width: 100%;
+            margin-top: 20px;
+        }
 
-        CRM_User: req.headers["x-crm-user"] || "Unknown User",
+        .summary-card-hero {
+            width: 100%;
+            height: 240px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
 
-        Function_Name: "getComparableSales",
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 100%;
+        }
 
-        Feature_Name: "Comparable Sales",
+        .summary-card {
+            background: #F8F9FA;
+            border: 1px solid #E9ECEF;
+            border-radius: 6px;
+            padding: 16px;
+            text-align: left;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
 
-        Record_ID: req.headers["x-record-id"] || "Unknown Record",
+        .summary-card-label {
+            font-size: 11px;
+            color: #787B7E;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
 
-        Execution_Time_MS: Date.now() - startTime,
+        .summary-card-value {
+            font-size: 18px;
+            color: #38424A;
+            font-weight: 600;
+        }
 
-        Status: soldResponse.ok ? "success" : "error",
+        .card {
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fafafa;
+        }
 
-        API_Consumption: totalBillingUnits,
+        .card-title {
+            font-size: 12px;
+            color: #777;
+            margin-bottom: 8px;
+        }
 
-        Usage_Response: usageBreakdown.join("\n"),
-      });
-    } catch (loggingError) {
-      console.error("LOGGING ERROR:", loggingError);
-    }
+        .card-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
 
-    // console.log(
-    //   "HTAG SOLD SEARCH RESPONSE:",
-    //   JSON.stringify(soldData, null, 2)
-    // );
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
 
-    // ============================================
-    // HANDLE CREDIT LIMIT
-    // ============================================
+        thead {
+            background: #f5f5f5;
+        }
 
-    if (soldResponse.status === 402) {
-      res.writeHead(402, {
-        "Content-Type": "application/json",
-      });
+        th {
+            text-align: left;
+            padding: 12px;
+            border: 1px solid #e5e5e5;
+            font-size: 13px;
+        }
 
+<<<<<<< HEAD
       res.end(
         JSON.stringify({
           error: "payment_required",
@@ -693,114 +695,447 @@ module.exports = async (req, res) => {
             "Oops! API credits exhausted. Please contact support@agenttime.au",
         })
       );
+=======
+        td {
+            padding: 12px;
+            border: 1px solid #e5e5e5;
+            font-size: 13px;
+        }
+>>>>>>> 85cccbc (feat: integrate dynamic CRM fields and fix PDF page-break top margins)
 
-      return;
-    }
+        .footer {
+            margin-top: 40px;
+            border-top: 1px solid #ececec;
+            padding-top: 18px;
+            text-align: center;
+            font-size: 11px;
+            color: #777;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
 
-    // ============================================
-    // HANDLE NO RESULTS
-    // ============================================
+        .disclaimer {
+            font-size: 12px;
+            line-height: 1.8;
+            color: #666;
+        }
 
-    if (!soldData.results || soldData.results.length === 0) {
-      res.writeHead(404, {
-        "Content-Type": "application/json",
-      });
+        .disclaimer-section {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
 
-      res.end(
-        JSON.stringify({
-          error: "no_results",
-          message: `No comparable sales found for ${address} try again later`,
-          searched_address: address,
-          address_key: addressKey,
-          htag_response: soldData,
-        })
-      );
+        .property-hero {
+            display: flex;
+            gap: 35px;
+            margin-top: 20px;
+            margin-bottom: 25px;
+            align-items: flex-start;
+        }
 
-      return;
-    }
+        .hero-image {
+            width: 260px;
+            flex-shrink: 0;
+        }
 
-    // ============================================
-    // SUCCESS RESPONSE
-    // ============================================
+        .hero-image img {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #e8e8e8;
+            background: white;
+            padding: 10px;
+        }
 
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-    });
+        .hero-details {
+            flex: 1;
+        }
 
-    res.end(
-      JSON.stringify({
-        success: true,
-        credit_data: {
-          available_credits: newBalance,
-          last_credits_consumed: totalBillingUnits,
-          credit_status: tenantCreditStatus,
-          last_topup: lastTopup,
-          last_topup_date: lastTopupDate,
-          total_credits_purchased: totalCreditsPurchased,
-        },
-        input_address: address,
-        address_key: addressKey,
-        total_results: soldData.total || 0,
-        comparable_sales: soldData.results.map((item) => ({
-          street_address: item.street_address || "",
+        .property-icons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
 
-          suburb: item.suburb || "",
+        .icon-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: #f8f9fa;
+            border: 1px solid #eef0f2;
+            border-radius: 8px;
+        }
 
-          sold_price: item.sold_price || "N/A",
+        .icon-card img {
+            width: 20px;
+            height: 20px;
+        }
 
-          sold_date: item.sold_date || "",
+        .icon-card span {
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+        }
 
-          bedrooms: item.bedrooms || 0,
+        .property-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
 
-          bathrooms: item.bathrooms || 0,
+        .property-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            color: #444;
+        }
 
-          car_spaces: item.car_spaces || 0,
+        .property-table tr:hover td {
+            background: #fafafa;
+        }
 
-          land_area: item.land_area || 0,
+        .property-table td:first-child {
+            width: 160px;
+            color: #777;
+            font-weight: 500;
+        }
 
-          property_type: item.property_type || "",
-        })),
-      })
-    );
-  } catch (error) {
-    try {
-      await usageTable.insertRow({
-        Org_ID: req.headers["x-org-id"] || "Unknown Org",
+        .sale-card {
+            display: flex;
+            gap: 24px;
+            border: 1px solid #eef0f2;
+            border-radius: 12px;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
 
-        CRM_User: req.headers["x-crm-user"] || "Unknown User",
+        .sale-image {
+            width: 170px;
+            flex-shrink: 0;
+        }
 
-        Function_Name: "getComparableSales",
+        .sale-image img {
+            width: 100%;
+            height: 130px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid #ececec;
+            padding: 12px;
+            background: white;
+        }
 
-        Feature_Name: "Comparable Sales",
+        .sale-content {
+            flex: 1;
+        }
 
-        Record_ID: req.headers["x-record-id"] || "Unknown Record",
+        .sale-address {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+        }
 
-        Execution_Time_MS: Date.now() - startTime,
+        .sale-icons {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
 
-        Status: "failed",
+        .sale-icons div {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+        }
 
-        API_Consumption: totalBillingUnits || 0,
+        .sale-icons img {
+            width: 16px;
+            height: 16px;
+        }
 
-        Usage_Response:
-          (usageBreakdown || []).join("\n") +
-          "\nERROR: " +
-          (error.message || "Unknown Error"),
-      });
-    } catch (loggingError) {
-      console.error("FAILURE LOGGING ERROR:", loggingError);
-    }
+        .sale-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ececec;
+        }
 
-    console.error("SERVER ERROR:", error);
+        .sale-date {
+            font-size: 13px;
+            color: #777;
+        }
 
-    res.writeHead(500, {
-      "Content-Type": "application/json",
-    });
+        .sale-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
 
-    res.end(
-      JSON.stringify({
-        error: "server_error",
-        message: error.message,
-      })
-    );
-  }
-};
+        .sale-type {
+            font-size: 11px;
+            font-weight: 600;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sale-price {
+            font-size: 26px;
+            font-weight: 700;
+            color: #111;
+        }
+
+        /* Valuation Box specific styling */
+        .estimation-box {
+            background: #FAFAFA;
+            border-left: 4px solid #38424A;
+            padding: 25px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        .estimation-label {
+            font-size: 11px;
+            color: #787B7E;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .estimation-value {
+            font-size: 28px;
+            margin: 10px 0;
+            color: #38424A;
+            font-weight: 700;
+        }
+
+        .estimation-text {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #4D4D4F;
+            margin-top: 12px;
+        }
+
+        .insights-list {
+            margin-top: 30px;
+        }
+
+        .insights-list h4 {
+            font-size: 15px;
+            color: #38424A;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .insights-list ul {
+            color: #4D4D4F;
+            line-height: 1.7;
+            padding-left: 20px;
+            font-size: 13px;
+        }
+
+        .insights-list li {
+            margin-bottom: 8px;
+        }
+
+        .report-footer {
+            page-break-inside: avoid;
+            break-inside: avoid;
+            position: absolute;
+            bottom: 20mm;
+            left: 20mm;
+            right: 20mm;
+        }
+
+        .page-break {
+            page-break-after: always;
+            break-after: page;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ========================= -->
+    <!-- PAGE 1: COVER PAGE -->
+    <!-- ========================= -->
+    <div class="page cover-page">
+        <div class="header">
+            <div class="left">
+                <div style="font-size:14px; font-weight:700; color:#333; margin-bottom:12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Comparative Market Analysis Report
+                </div>
+                <div class="title" style="font-size: 24px; font-weight: 700; color: #1a1a1a; line-height: 1.25; margin-top: 10px; margin-bottom: 20px;">
+                    {{PROPERTY_ADDRESS}}
+                </div>
+                <div class="meta" style="margin-top: 20px;">
+                    <table style="width: auto; border-collapse: collapse; font-size: 12px; margin-top: 0;">
+                        <tr>
+                            <td style="border: none; padding: 4px 30px 4px 0; color: #777; font-weight: 500;">
+                                Prepared On
+                            </td>
+                            <td style="border: none; padding: 4px 0; color: #222; font-weight: 600;">
+                                {{GENERATED_DATE}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; padding: 4px 30px 4px 0; color: #777; font-weight: 500;">
+                                Prepared By
+                            </td>
+                            <td style="border: none; padding: 4px 0; color: #222; font-weight: 600;">
+                                {{GENERATED_BY}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; padding: 4px 30px 4px 0; color: #777; font-weight: 500;">
+                                Generated Using
+                            </td>
+                            <td style="border: none; padding: 4px 0; color: #222; font-weight: 600;">
+                                Agent Time Buyers Agency Suite
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="right">
+                <div class="logo">
+                    <img src="assets/htag-logo.png" style="width:95px; height: auto;">
+                </div>
+            </div>
+        </div>
+        <div class="cover-image">
+            <img src="assets/property-placeholder.png" alt="Property Cover Image">
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ========================= -->
+    <!-- PAGE 2: SUMMARY PAGE -->
+    <!-- ========================= -->
+    <div class="page summary-page">
+        <div class="section">
+            <div class="section-title">Property Summary</div>
+            <div class="property-hero">
+                <div class="hero-image">
+                    <img src="assets/property-placeholder.png" alt="Property Thumbnail">
+                </div>
+                <div class="hero-details">
+                    <div class="property-icons">
+                        <div class="icon-card">
+                            <img src="assets/bed.png" alt="Bed Icon">
+                            <span>{{BEDROOMS}} Bedrooms</span>
+                        </div>
+                        <div class="icon-card">
+                            <img src="assets/bath.png" alt="Bath Icon">
+                            <span>{{BATHROOMS}} Bathrooms</span>
+                        </div>
+                        <div class="icon-card">
+                            <img src="assets/car.png" alt="Car Icon">
+                            <span>{{CAR_SPACES}} Car Spaces</span>
+                        </div>
+                        <div class="icon-card">
+                            <img src="assets/land.png" alt="Land Icon">
+                            <span>{{LAND_SIZE}} Sqm</span>
+                        </div>
+                    </div>
+                    <table class="property-table">
+                        <tr>
+                            <td>Property Type</td>
+                            <td>{{PROPERTY_TYPE}}</td>
+                        </tr>
+                        <tr>
+                            <td>Year Built</td>
+                            <td>{{YEAR_BUILT}}</td>
+                        </tr>
+                        <tr>
+                            <td>Zone</td>
+                            <td>{{ZONE}}</td>
+                        </tr>
+                        <tr>
+                            <td>Radius Used</td>
+                            <td>{{RADIUS}}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ========================= -->
+    <!-- PAGE 3: RECENTLY SOLD PROPERTIES (DYNAMIC FLOW CONTAINER) -->
+    <!-- ========================= -->
+    <div class="dynamic-page comparable-page">
+        <div class="section">
+            <div class="section-title">Recently Sold Properties</div>
+            <div class="sales-list">
+                {{COMPARABLE_ROWS}}
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ========================= -->
+    <!-- PAGE 4: ESTIMATED PROPERTY VALUE -->
+    <!-- ========================= -->
+    <div class="page estimation-page">
+        <div class="section">
+            <div class="section-title">Estimated Property Value</div>
+            
+            <div class="estimation-box">
+                <span class="estimation-label">Estimated Price Range</span>
+                <div class="estimation-value">{{MIN_ESTIMATED_VALUE}} - {{MAX_ESTIMATED_VALUE}}</div>
+                <p class="estimation-text">
+                    This automated estimated value represents our localized pricing analysis compiled using recent surrounding sales indices, historical trends, property configuration weighting, and general market velocity within the area.
+                </p>
+            </div>
+
+            <div class="insights-list">
+                <h4>Key Pricing Insights</h4>
+                <ul>
+                    <li>Calculated based on local transactions of similar scale, configuration, and structural layout within your chosen search radius.</li>
+                    <li>Value index considers specific zoning variances, dynamic land-to-building ratios, and active buyer interest parameters across our platform database.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ========================= -->
+    <!-- FINAL PAGE: DISCLAIMER & FOOTER -->
+    <!-- ========================= -->
+    <div class="page disclaimer-page">
+        <div class="report-footer">
+            <div class="section disclaimer-section">
+                <div class="section-title">Disclaimer</div>
+                <div class="disclaimer">
+                    This report has been generated using property data supplied by HTAG and information available within Agent Time Buyers Agency Suite. The information contained in this report is intended as a guide only and should not be relied upon as an independent valuation or legal advice. Users should undertake their own due diligence and seek professional advice before making any property or financial decisions.
+                </div>
+            </div>
+            <div class="footer">
+                Powered by <strong>Agent Time Buyers Agency Suite</strong> • Property Data by <strong>HTAG</strong>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

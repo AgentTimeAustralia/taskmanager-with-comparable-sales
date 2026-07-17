@@ -1,0 +1,11 @@
+{
+	"name": "generatecmapdf",
+	"version": "1.0.0",
+	"main": "index.js",
+	"author": "info@agenttime.au",
+	"dependencies": {
+    "puppeteer-core": "^23.11.1",
+    "@sparticuz/chromium": "^138.0.2",
+    "zcatalyst-sdk-node": "latest"
+}
+}
